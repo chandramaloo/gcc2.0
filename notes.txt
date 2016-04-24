@@ -1,0 +1,45 @@
+
+add a priority of children and whether_assign_present to the node; to be determined while computing the reqreg
+
+for each block{
+	call f(block, l)
+}
+
+f(node,l) {
+	if(node need not be checked) f(each child, l) and return
+	if (node.reqreg <= l) return;
+
+	if (child1 priority) {
+		if (child1.reqreg > l) {
+			set child1.storeneeded = 1
+			set child1.reqreg = 0
+		}
+		if (child2.reqreg > l-1) {
+			set child2.storeneeded = 1
+			set child2.reqreg = 0
+		}
+	} else {
+		if (child2.reqreg > l) {
+			set child2.storeneeded = 1
+			set child2.reqreg = 0
+		}
+		if (child1.reqreg > l-1) {
+			set child1.storeneeded = 1
+			set child1.reqreg = 0
+		}
+	}
+
+	// update node.reqreg
+}
+
+
+=======================================================================================================
+
+To support floats as well, we need to check the type of operand at each step and typecast as the need be. Then use the correct instruction.
+
+-> mtc1 $s0, $f12; cvt.s.w FRdest, FRsrc // reg to float
+-> mfc1 $t1, $f12; cvt.w.s FRdest, FRsrc // float to reg
+-> add.s $f1, $f1, $f1 // sub, mul, div, rem
+-> l.s FRdest, mem
+-> s.s FRsrc, mem
+-> mov.s FRdest, FRsrc
