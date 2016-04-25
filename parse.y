@@ -704,12 +704,14 @@ unary_expression
 			if(temp1=="UMINUS" || temp1=="NOT" || temp1=="PP"){
 				ExpAst* temp = new OpUnary(temp1, temp2);
 				temp->lvalue = false;
+				temp->value = temp2->value;
 				temp->type = temp2->type;
 				$$ = temp;
 			}
 			else if(temp1=="Pointer"){
 				ExpAst* temp = new Pointer(temp2);
 				temp->lvalue = false;
+				temp->value = temp2->value;
 				temp->type = temp2->type;
 				temp->type.ptr++;
 				$$ = temp;
@@ -717,6 +719,7 @@ unary_expression
 			else if(temp1=="Deref"){
 				RefAst* temp = new Deref(temp2);
 				temp->lvalue = true;
+				temp->value = temp2->value;
 				temp->type = temp2->type;
 				temp->type.ptr--;
 				$$ = temp;
@@ -812,6 +815,7 @@ postfix_expression
 			}
 			ExpAst* temp = new ArrayRef(temp1, temp3);
 			temp->lvalue = true;
+			temp->value = temp1->value;
 			temp->type = temp1->type;
 			for(int i=0; i<temp->type.vec.size()-1; i++)
 				temp->type.vec[i] = temp->type.vec[i+1];
@@ -860,6 +864,7 @@ postfix_expression
 				exit(0);
 			}
 			ExpAst* temp = new OpUnary("PP", temp1);
+			temp->value = temp1->value;
 			temp->lvalue = false;
 			temp->type = temp1->type;
 			$$ = temp;

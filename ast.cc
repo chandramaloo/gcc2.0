@@ -790,11 +790,18 @@ string Funcall::generate_code(const LocalSymbolTable& lstt, bool location) {
 	// gen code for all the children
 	for(int i=0; i<children.size(); i++){
         
-        // TODO check if the parameter is passed by reference in the function definition in the GST
-        if(children[i]->type.vec.size()>0)
-        	ret += children[i]->generate_code(lstt, 1);
-	    else
+       // TODO check if the parameter is passed by reference in the function definition in the GST
+        if(children[i]->type.vec.size()>0){
+        	if(lstt.getEntry(children[i]->value).symbol_scope!="param"){
+	        	ret += children[i]->generate_code(lstt, 1);
+        	}
+	        else {
+		        ret += children[i]->generate_code(lstt, 0);
+	        }
+        }
+	    else{
 	        ret += children[i]->generate_code(lstt, 0);
+	    }
 	}
 
 	// call the function

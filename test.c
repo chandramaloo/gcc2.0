@@ -1,4 +1,4 @@
-int binary(int start, int end, int val, int a[10]){
+int binary(int start, int end, int val, int a[1]){
 	int mid;
     mid = start+end;
     mid = mid / 2;
@@ -6,7 +6,7 @@ int binary(int start, int end, int val, int a[10]){
         return mid;
     }
     else {
-        if(start == end){
+        if(start == end - 1){
 	 	     return -1;	
         } else {
             if( a[mid] < val){
@@ -25,6 +25,6 @@ int main()
 	for(i=0; i<10; i++){
 		a[i] = i*i*i;
 	}
-	i = binary(0,10,27,a);
-	printf(i, "\n");
+	i = binary(0,10,64,a);
+	printf(i, " Answer\n");
 }

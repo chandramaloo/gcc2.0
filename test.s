@@ -1,5 +1,5 @@
 	.data
-L0:	.asciiz	"\n"
+L0:	.asciiz	" Answer\n"
 	.text
 
 binary:
@@ -110,6 +110,16 @@ L1:
 	addi $sp, $sp, -4
 	sw $s0, 0($sp)
 
+	addi $s0, $0, 1
+	addi $sp, $sp, -4
+	sw $s0, 0($sp)
+
+	lw $s0, 4($sp)
+	lw $s1 0($sp)
+	addi $sp, $sp, 4
+	sub $s0, $s0, $s1
+	sw $s0, 0($sp)
+
 	lw $s0, 4($sp)
 	lw $s1 0($sp)
 	addi $sp, $sp, 4
@@ -182,7 +192,7 @@ L3:
 	addi $sp, $sp, -4
 	sw $s0, 0($sp)
 
-	addi $s0, $fp, 8
+	lw $s0, 8($fp)
 	addi $sp, $sp, -4
 	sw $s0, 0($sp)
 
@@ -211,7 +221,7 @@ L5:
 	addi $sp, $sp, -4
 	sw $s0, 0($sp)
 
-	addi $s0, $fp, 8
+	lw $s0, 8($fp)
 	addi $sp, $sp, -4
 	sw $s0, 0($sp)
 
@@ -351,7 +361,7 @@ L8:
 	addi $sp, $sp, -4
 	sw $s0, 0($sp)
 
-	addi $s0, $0, 27
+	addi $s0, $0, 64
 	addi $sp, $sp, -4
 	sw $s0, 0($sp)
 
