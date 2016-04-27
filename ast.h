@@ -298,3 +298,16 @@ public:
 	string generate_code(const LocalSymbolTable&, bool);
 	void assignReg();
 };
+
+class CacheBlock{
+public:
+	string identifier, reg;
+	bool valid;
+	int depth, offset;
+}
+
+class Cache{
+	vector<CacheBlock> cache;
+	string findregister(int offst) {
+	}
+}

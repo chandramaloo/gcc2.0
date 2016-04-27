@@ -11,7 +11,10 @@ when exiting a function; invalidate all register nodes with currentDepth as dept
 when evaluating an expression, put that into a temporary register and put that in that ast
 if no register available, store to stack and set that as offset in the ast_node
 
-string
+string findregister(int offset) {
+	// add to cache if not present already and return that register
+}
+
 
 
 

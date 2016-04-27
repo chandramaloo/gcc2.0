@@ -665,19 +665,27 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 		}
 		if(label == "LT-FLOAT") {
 			ret += "\tc.lt.s $f0, $f1\nbczt " + label + "\n";
-			ret += label + ":\n\taddi $s0, $0, 1\n\taddi$sp, $sp, -4\n\tsw $s0, 0($sp)\n";
+			ret += "\taddi$sp, $sp, -4\n\tsw $0, 0($sp)\n";
+			ret += label + ":\n\taddi $s0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $s0, 0($sp\n)";
+			ret += label2 + ":\n";
 		}
 		else if(label == "LE_OP-FLOAT") {
 			ret += "\tc.le.s $f0, $f1\nbczt " + label + "\n";
-			ret += label + ":\n\taddi $s0, $0, 1\n\taddi$sp, $sp, -4\n\tsw $s0, 0($sp)\n";
+			ret += "\taddi$sp, $sp, -4\n\tsw $0, 0($sp)\n";
+			ret += label + ":\n\taddi $s0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $s0, 0($sp\n)";
+			ret += label2 + ":\n";
 		}
 		else if(label == "GE_OP-FLOAT") {
 			ret += "\tc.le.s $f1, $f0\nbczt " + label + "\n";
-			ret += label + ":\n\taddi $s0, $0, 1\n\taddi$sp, $sp, -4\n\tsw $s0, 0($sp)\n";
+			ret += "\taddi$sp, $sp, -4\n\tsw $0, 0($sp)\n";
+			ret += label + ":\n\taddi $s0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $s0, 0($sp\n)";
+			ret += label2 + ":\n";
 		}
 		else if(label == "GT-FLOAT") {
 			ret += "\tc.lt.s $f1, $f0\nbczt " + label + "\n";
-			ret += label + ":\n\taddi $s0, $0, 1\n\taddi$sp, $sp, -4\n\tsw $s0, 0($sp)\n";
+			ret += "\taddi$sp, $sp, -4\n\tsw $0, 0($sp)\n";
+			ret += label + ":\n\taddi $s0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $s0, 0($sp\n)";
+			ret += label2 + ":\n";
 		}
 		else if(label == "PLUS-FLOAT") {
 			ret += "\tadd.s $f0, $f0, $f1\n";
