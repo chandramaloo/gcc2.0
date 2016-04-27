@@ -1,7 +1,7 @@
 generate_code has an additional parameter: PushToStack; if true, the code NEEDS the values in the stack
 global variable currentDepth
-temporary registers: $t0-$t9, $f0-$f15 except $f12
-permanent registers: $s0-$s7, $f16-$f31
+temporary registers: $t0-$t9, $f0-$f9
+permanent registers: $s0-$s7, $f10-$f31 except $f12
 
 list of such nodes, with contents : register name, valid, depth, value, offset; if offset is 0, it is a constant
 

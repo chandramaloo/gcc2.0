@@ -1132,3 +1132,13 @@ string ArrayRef::generate_code(const LocalSymbolTable& lstt, bool location) {
 void ArrayRef::assignReg() {
 
 }
+
+
+// off is the offset for which we are checking
+string Cache::findregister(int off) {
+	for(int i=0; i<cache.size(); i++) {
+		if (cache[i].valid && cache[i].depth == currentDepth && cache[i].offset == off) {
+			return cache[i].reg;
+		}
+	}
+}

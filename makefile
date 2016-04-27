@@ -7,7 +7,7 @@ all:    Scanner.ih Scanner.h Scannerbase.h lex.cc parse.cc main.cc Parser.h Pars
 	@echo "\nOutput:"
 	@./parser < $(file)  > /dev/null
 
-        
+
 Scanner.ih: lex.l
 	@if [ ! -e Scanner.ih ]; then \
 		flexc++ lex.l;\
@@ -16,7 +16,7 @@ Scanner.ih: lex.l
 
 parse.cc Parser.h Parserbase.h Parser.ih: parse.y
 	@bisonc++ --construction -V parse.y;
-	@sed -i '/#include/a stack<string> rstack, tstack;\nqueue<pair<string, string> > const_strings;\nvector<abstract_astnode* > nodePtr;\nGlobalSymbolTable gst;\nLocalSymbolTable lst;\nSymTabEntry* ste = new SymTabEntry();\nstring file = "$(file)", file_s = "$(file_s)", tempType;\nbool isStruct = false, isFunc = false;\nvector<int> arr;\nint lcount=1, tempWidth, varOffset= -4, paramOffset = 8, labelcount=0;\n' Parser.ih;
+	@sed -i '/#include/a stack<string> tstack, ftstack;\nqueue<pair<string, string> > const_strings;\nvector<abstract_astnode* > nodePtr;\nGlobalSymbolTable gst;\nLocalSymbolTable lst;\nSymTabEntry* ste = new SymTabEntry();\nstring file = "$(file)", file_s = "$(file_s)", tempType;\nbool isStruct = false, isFunc = false;\nvector<int> arr;\nint lcount=1, tempWidth, varOffset= -4, paramOffset = 8, labelcount=0;\n' Parser.ih;
 	@sed -i '/insert preincludes/a #include "ast.h"' Parserbase.h;
 	@sed -i '\|STYPE__     d_val__;| d' Parserbase.h;
 	@sed -i '\|typedef Meta__::SType STYPE__;| a \\tpublic: static STYPE__  d_val__; ' Parserbase.h;
@@ -24,7 +24,6 @@ parse.cc Parser.h Parserbase.h Parser.ih: parse.y
 	@sed -i '\|void Parser::print__()| i Meta__::SType ParserBase::d_val__; ' parse.cc
 
 
-.PHONY: clean     
+.PHONY: clean
 clean:
 	$(RM) Parser.ih Parser.h Parserbase.h parse.cc Scanner.ih Scanner.h Scannerbase.h lex.cc parse.y.output a.out graph.ps output parser *~
-

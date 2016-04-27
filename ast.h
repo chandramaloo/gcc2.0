@@ -304,10 +304,10 @@ public:
 	string identifier, reg;
 	bool valid;
 	int depth, offset;
-}
+};
 
 class Cache{
+public:
 	vector<CacheBlock> cache;
-	string findregister(int offst) {
-	}
-}
+	string findregister(int);
+};
