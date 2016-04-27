@@ -22,6 +22,7 @@ public:
 	Symbol_Type();
 	Symbol_Type(const Symbol_Type&);
 	void print();
+	bool pureType();
 	bool canCast(Symbol_Type a);
 	Symbol_Type castType(Symbol_Type a);
 	int getWidth();
@@ -89,7 +90,7 @@ class abstract_astnode
 public:
 	string label, value, string_label, reg;
 	int reqReg;
-	bool lvalue;
+	bool lvalue, regValid;
 	Symbol_Type type;
 	abstract_astnode* child1, *child2, *child3, *child4;
 	virtual void print() = 0;

@@ -20,12 +20,12 @@ int main (int argc, char** argv)
 	// preparing the register stacks
 	string r = "$t9";
 
-	for(int i=9; i>=0; i--, r[2]--)
+	for(int i=9; i>=2; i--, r[2]--)
 		tstack.push(r);
 
 	r = "$f9";
-	for(int i=15; i>=0; i--, r[2]--)
-		tfstack.push(r);
+	for(int i=15; i>=2; i--, r[2]--)
+		ftstack.push(r);
 
   // print all const strings to target file
   out << "\t.data\n";
