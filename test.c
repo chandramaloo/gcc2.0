@@ -1,6 +1,8 @@
+int f(int a) {
+    return a+1;
+}
 int main() {
-  float i;
-  i = 20;
-  printf((i+2*i)*(i+2*i), "\n");
-  printf(i);
+    int f, g;
+    g = f(4);
+    return 0;
 }

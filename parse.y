@@ -737,6 +737,11 @@ postfix_expression
 			vector<ExpAst*> empty;
 			ExpAst* temp = new Funcall(new Identifier($1), empty);
 			temp->lvalue = false;
+			if(lst.contains($1)){
+				cerr << file << ": In function '" << lst.meta->symbol_name << "':\n";
+				cerr << file << ":line " << lcount << ": error: called object ‘"<< $1 <<"’ is not a function or function pointer\n";
+				exit(0);
+			}
 			if(gst.containsFun($1)){
 				if(gst.getLst($1).match(empty)){
 					temp->type = gst.getLst($1).meta->symbol_type;
@@ -767,6 +772,11 @@ postfix_expression
 		}
 	| IDENTIFIER '(' expression_list ')'
 		{
+			if(lst.contains($1)){
+				cerr << file << ": In function '" << lst.meta->symbol_name << "':\n";
+				cerr << file << ":line " << lcount << ": error: called object ‘"<< $1 <<"’ is not a function or function pointer\n";
+				exit(0);
+			}
 			if($1!="printf"){
 				ExpAst* temp = new Funcall(new Identifier($1), $3);
 				temp->lvalue = false;
