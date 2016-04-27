@@ -27,13 +27,30 @@ void setArrayWidth(vector<string> arr){
 
 // create space for local variables on stack
 string genLocalVar(const LocalSymbolTable& lstt){
-    int ret = 0;
+	int ret = 0;
 	for(int i=0; i < lstt.rows.size(); i++){
 		if(lstt.rows[i].symbol_scope=="local"){
 			ret += lstt.rows[i].width;
 		}
 	}
 	return "\taddi $sp, $sp, -" + to_string(ret) + "\n";
+}
+
+// offsetFrom(from) should point to top of block
+// offsetFrom < 0 if something below top is passed
+// offsetTo(to) should point to top of block
+// e.g. from = "($sp)"; to = "($s0)"
+// neither of these can be "$(s1)"
+// assumes space already created on stack
+string copy(int width, string from, string to, int offsetFrom, int offsetTo){
+	string ret = "";
+	// cpoying from low to high addresses, top to bottom
+	for (int i=0; i<width; i += 4) {
+		ret += "\tlw $s1, " + to_string(i + offsetFrom) + from + "\n";
+		ret += "\tsw $s1, " + to_string(i + offsetTo) + to + "\n";
+	}
+	ret += "\n";
+	return ret;
 }
 
 //Symbol_Type Class Functions
@@ -269,7 +286,7 @@ void GlobalSymbolTable::print(){
 	fprintf(stderr, "\nContents in LSTs:\n");
 	for(map<string, LocalSymbolTable>::iterator it = this->mapper.begin(); it != this->mapper.end(); it++) 
 		if (it->first != "printf")
-            it->second.print();
+			it->second.print();
 	fprintf(stderr, "\n");
 }
 
@@ -333,8 +350,8 @@ string Block::generate_code(const LocalSymbolTable& lstt, bool location) {
 	ret += "\taddi $sp, $sp, -8\n\tsw $ra, 4($sp)\n\tsw $fp, 0($sp)\n\tmove $fp, $sp\n";	// store dynamic link
 	ret += genLocalVar(lstt);
 	ret += child1->generate_code(lstt, location);
-    ret += "\n" + label + "Return:\n\tlw $ra, 4($fp)\n\tmove $sp, $fp\n\tlw $fp, 0($fp)\n\taddi $sp, $sp, 8\n\tjr $ra\n\n";
-    return ret;
+	ret += "\n" + label + "Return:\n\tlw $ra, 4($fp)\n\tmove $sp, $fp\n\tlw $fp, 0($fp)\n\taddi $sp, $sp, 8\n\tjr $ra\n\n";
+	return ret;
 }
 
 void Block::assignReg() {
@@ -363,14 +380,11 @@ Seq::Seq(std::vector<StmtAst*> children){
 }
 
 void Seq::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << "(" << label << " [";
 	for(int i=0; i < children.size(); i++){
-	   	cerr << "(";
+		cerr << "(";
 		children[i] ->print();
-	   	cerr << ") ";
+		cerr << ") ";
 	}
 	cerr << "])" << endl;
 }
@@ -380,7 +394,7 @@ string Seq::generate_code(const LocalSymbolTable& lstt, bool location) {
 	for(int i = 0; i < children.size(); i++){
 		ret += children[i]->generate_code(lstt, location);
 	}
-    ret += "\n";
+	ret += "\n";
 	return ret;
 }
 
@@ -392,14 +406,11 @@ void Seq::assignReg() {
 
 Return::Return(ExpAst* child1, string funcName){
 	label = "Return";
-    value = funcName;
+	value = funcName;
 	this->child1 = child1;
 }
 
 void Return::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " (" ;
 	child1 ->print();
 	cerr << ") ";
@@ -407,27 +418,11 @@ void Return::print(){
 
 string Return::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
-    
-    ret += child1->generate_code(lstt, 0);
-    
-    int f_width = gst.getLst(value).meta->width, rv_width = gst.getLst(value).meta->symbol_type.getWidth();
-
-    
-    ret += "# struct_width found to be " + to_string(rv_width) + "\n";
-
-    // if it is a struct, need to copy struct->width number of bytes starting from the address in $s0 generated above
-    for (int i=0; i<rv_width; i += 4) {
-        ret += "\tlw $s1, " + to_string(i) + "($sp)\n";
-        ret += "\tsw $s1, " + to_string(f_width+8+i) + "($fp)\n";
-    }
-
-    ret += "\n";
-
-    
-    
-    ret += "\tj " + value + "Return\n\n";
-
-    return ret;
+	ret += child1->generate_code(lstt, 0);
+	int f_width = gst.getLst(value).meta->width, rv_width = gst.getLst(value).meta->symbol_type.getWidth();
+	ret += copy(rv_width, "($sp)", "($fp)", 0, f_width + 8);
+	ret += "\tj " + value + "Return\n\n";
+	return ret;
 }
 
 void Return::assignReg() {
@@ -442,9 +437,6 @@ If::If(ExpAst* child1, StmtAst* child2, StmtAst* child3){
 }
 
 void If::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " (";
 	child1 ->print();
 	cerr << ") (";
@@ -485,9 +477,6 @@ While::While(ExpAst* child1, StmtAst* child2){
 }
 
 void While::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " (";
 	child1 ->print();
 	cerr << ") (";
@@ -523,9 +512,6 @@ For::For(ExpAst* child1, ExpAst* child2, ExpAst* child3, StmtAst* child4){
 }
 
 void For::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " (";
 	child1 ->print();
 	cerr << ") (";
@@ -567,9 +553,6 @@ OpUnary::OpUnary(string label, ExpAst* child1){
 }
 
 void OpUnary::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " (";
 	child1 ->print();
 	cerr << ") ";
@@ -580,7 +563,6 @@ string OpUnary::generate_code(const LocalSymbolTable& lstt, bool location) {
 	if (label == "PP") {
 		ret += child1->generate_code(lstt, 1);
 		ret += "\tlw $s0, 0($sp)\n\tlw $s1, 0($s0)\n\taddi $s2, $s1, 1\n\tsw $s2, 0($s0)\n";
-		ret += "\tsw $s2, 0($sp)\n\n";
 		return ret;
 	}
 
@@ -609,9 +591,6 @@ OpBinary::OpBinary(string label, ExpAst* child1, ExpAst* child2){
 }
 
 void OpBinary::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " (";
 	child1 ->print();
 	cerr << ") (";
@@ -659,9 +638,9 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 	else if(label == "MULT-INT") {
 		ret += "\tmul $s0, $s0, $s1\n";
 	}
-    else if(label == "DIV-INT") {
-        ret += "\tdiv $s0, $s0, $s1\n";
-    }
+	else if(label == "DIV-INT") {
+		ret += "\tdiv $s0, $s0, $s1\n";
+	}
 	ret += "\tsw $s0, 0($sp)\n\n";
 
 	return ret;
@@ -682,9 +661,6 @@ Assign::Assign(ExpAst* child1, ExpAst* child2){
 }
 
 void Assign::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label <<" (";
 	child1 ->print();
 	cerr << ") (";
@@ -697,25 +673,12 @@ string Assign::generate_code(const LocalSymbolTable& lstt, bool location) {
 	ret += child2->generate_code(lstt, 0);
 	ret += child1->generate_code(lstt, 1);
 
-    // load child1 from stack into $s0 and sp+=4
-    ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n";
-    
-    // copy width bytes from current sp to $s0
-    
-    
-    // TODO check this with Maloo
-    int struct_width = child2->type.getWidth();
-    ret += "# " + to_string(struct_width) + " bytes to be copied due to assignment operator\n";    
-
-    // if it is a struct, need to copy struct->width number of bytes starting from the address in $s0 generated above
-    for (int i=0; i<struct_width; i += 4) {
-        ret += "\tlw $s1, " + to_string(struct_width-4-i) + "($sp)\n";
-        ret += "\tsw $s1, -" + to_string(i) + "($s0)\n";
-    }
-    ret += "\taddi, $sp, $sp, " + to_string(struct_width) + "\n";
-    
-    ret += "\n";
-
+	// load child1 from stack into $s0 and sp+=4
+	ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n";
+	
+	// copy width bytes from current $sp to $s0
+	int obj_width = child2->type.getWidth();
+	ret += copy(obj_width,"($sp)", "($s0)", 0, 4-obj_width);
 	return ret;
 }
 
@@ -730,9 +693,6 @@ Funcall::Funcall(RefAst* child1, vector<ExpAst*> children){
 }
 
 void Funcall::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << " (" << label;
 	child1 ->print();
 	for(int i=0; i < children.size(); i++){
@@ -749,11 +709,14 @@ string Funcall::generate_code(const LocalSymbolTable& lstt, bool location) {
         // do a syscall for each stringconst, float, int in the children
         for (int i=0; i<children.size(); i++) {
             if (children[i]->label == "StringConst") {
-                ret += "\tla $a0, " + children[i]->string_label + "\n\taddi $v0, $0, 4\n\tsyscall\n";
+							ret += "# printf prints a string const\n";
+			    		ret += "\tla $a0, " + children[i]->string_label + "\n\taddi $v0, $0, 4\n\tsyscall\n";
             } else if (children[i]->label == "IntConst") {
+								ret += "# printf prints an int const\n";
                 ret += "\taddi $a0, $0, " + children[i]->value + "\n\taddi $v0, $0, 1\n\tsyscall\n";
             } else if (children[i]->label == "FloatConst") {
-                ret += "\tli.s $f12, " + children[i]->value + "\n\taddi $v0, $0, 2\n\tsyscall\n";                
+								ret += "# printf prints a float const\n";
+			          ret += "\tli.s $f12, " + children[i]->value + "\n\taddi $v0, $0, 2\n\tsyscall\n";
             } else if (children[i]->label == "Id") {
                 string type = lstt.getEntry(children[i]->value).symbol_type.type;
                 if (type == "int") {
@@ -768,29 +731,34 @@ string Funcall::generate_code(const LocalSymbolTable& lstt, bool location) {
                     ret += "\taddi $v0, $0, 2\n\tsyscall\n";
                 }
             } else {
-                // TODO do it for the case that the expression is a float
+
                 ret += "# printf prints an expression\n";
                 ret += children[i]->generate_code(lstt, 0);
-                ret += "\tlw $a0, 0($sp)\n\taddi $sp, $sp, 4\n";
-                ret += "\taddi $v0, $0, 1\n\tsyscall\n";
+								if (children[i]->type.type == "int") {
+                	ret += "\tlw $a0, 0($sp)\n\taddi $sp, $sp, 4\n";
+                	ret += "\taddi $v0, $0, 1\n\tsyscall\n";
+								} else if (children[i]->type.type == "float") {
+									ret += "\tl.s $f12, 0($sp)\n\taddi $sp, $sp, 4\n";
+									ret += "\taddi $v0, $0, 2\n\tsyscall\n";
+								}
             }
         }
-        
+
         return ret;
     }
-    
+
 	// get the width of the function return value from the gst using child1 as identifier
 	int rv_width = gst.getLst(child1->value).meta->symbol_type.getWidth();
 
     // get space on the stack for rv
 	ret += "\taddi $sp, $sp, " + to_string((-1)*rv_width) + "\n";
-	
+
 	// get the total width of the function parameters
 	int f_width = gst.getLst(child1->value).meta->width;
-		
+
 	// gen code for all the children
 	for(int i=0; i<children.size(); i++){
-        
+
        // TODO check if the parameter is passed by reference in the function definition in the GST
         if(children[i]->type.vec.size()>0){
         	if(lstt.getEntry(children[i]->value).symbol_scope!="param"){
@@ -810,9 +778,10 @@ string Funcall::generate_code(const LocalSymbolTable& lstt, bool location) {
 
 	// pop the parameters from the stack
 	ret += "\taddi $sp, $sp, " + to_string(f_width) + "\n\n";
-	
+
 	return ret;
 }
+
 
 void Funcall::assignReg() {
 	for(int i=0; i < children.size(); i++){
@@ -826,17 +795,15 @@ FloatConst::FloatConst(string value){
 }
 
 void FloatConst::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr<< label << value;
 }
 
 // TODO float typecasting for FloatConst generate_code
 string FloatConst::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
-    if (location) ret += "#trying to get location of read only data\n";
-	return ret += "\tli.s $f0, " + value + "\n\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";
+	if (location) ret += "#trying to get location of read only data\n";
+	ret += "\tli.s $f0, " + value + "\n\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";
+	return ret;
 }
 
 void FloatConst::assignReg() {
@@ -849,17 +816,14 @@ IntConst::IntConst(string value){
 }
 
 void IntConst::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << value;
 }
 
 string IntConst::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
-    if (location) ret += "#trying to get location of read only data\n";
-    ret += "\taddi $s0, $0, " + value + "\n\taddi $sp, $sp, -4\n\tsw $s0, 0($sp)\n\n";
-    return ret;
+	if (location) ret += "#trying to get location of read only data\n";
+	ret += "\taddi $s0, $0, " + value + "\n\taddi $sp, $sp, -4\n\tsw $s0, 0($sp)\n\n";
+	return ret;
 }
 
 void IntConst::assignReg() {
@@ -868,21 +832,18 @@ void IntConst::assignReg() {
 
 StringConst::StringConst(string value){
 	label = "StringConst";
-    string_label = newlabel();
-    const_strings.push(make_pair(string_label, value));
-    this->value = value;
+	string_label = newlabel();
+	const_strings.push(make_pair(string_label, value));
+	this->value = value;
 }
 
 void StringConst::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " \"" << value << "\"";
 }
 
 string StringConst::generate_code(const LocalSymbolTable& lstt, bool location) {
-    // TODO add this string at the top of the mips code with a label and return the address of that label
-    return "#trying to generate code for constant strings\n";
+	// TODO add this string at the top of the mips code with a label and return the address of that label
+	return "#trying to generate code for constant strings\n";
 }
 
 void StringConst::assignReg() {
@@ -895,16 +856,13 @@ Pointer::Pointer(ExpAst* child1){
 }
 
 void Pointer::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " (";
 	child1 ->print();
 	cerr<<") ";
 }
 
 string Pointer::generate_code(const LocalSymbolTable& lstt, bool location) {
-    return child1->generate_code(lstt, 1);
+	return child1->generate_code(lstt, 1);
 }
 
 void Pointer::assignReg() {
@@ -918,9 +876,6 @@ Member::Member(ExpAst* child1, RefAst* child2){
 }
 
 void Member::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label <<" (";
 	child1 ->print();
 	cerr << ") (";
@@ -929,39 +884,23 @@ void Member::print(){
 }
 
 string Member::generate_code(const LocalSymbolTable& lstt, bool location) {
-    string ret = "";
-
-    // left wale pe location chahiye
-    ret += child1->generate_code(lstt, 1);
-    
-    // no need to generate code for child2 (it is an identifier), need it for calculating the offset
-
-    // look child1->type.type up in the lst; child2 ka offset nikalo is struct k liye
-    int offset = gst.getLst(child1->type.type).getEntry(child2->value).offset;
-
-    ret += "\tlw $s0, 0($sp)\n\taddi $s1, $0," + to_string(offset) + "\n\tadd $s0, $s0, $s1\n";
-    
-    if (location) {
-        // push to stack sum of the return values of stack
-        ret += "\tsw $s0, 0($sp)\n\n";
-    } else {
-        int struct_width = type.getWidth();
-        ret += "# struct_width found to be " + to_string(struct_width) + "\n";
-
-        // invalidate the child1 stored in the stack ;)
-        if (struct_width != 4)
-            ret += "\taddi $sp, $sp, " + to_string((-1)*(struct_width-4)) + "\n";
-
-        // if it is a struct, need to copy struct->width number of bytes starting from the address in $s0 generated above
-        for (int i=0; i<struct_width; i += 4) {
-            ret += "\tlw $s1, " + to_string((-1)*(struct_width-4-i)) + "($s0)\n";
-            ret += "\tsw $s1, " + to_string(i) + "($sp)\n";
-        }
-
-        ret += "\n";
-
-        return ret;
-    }	
+	string ret = "";
+	// We need address of left child
+	ret += child1->generate_code(lstt, 1);
+	// no need to generate code for child2 (it is an identifier), need it for calculating the offset
+	// look child1->type.type up in the lst; child2 ka offset nikalo is struct k liye
+	int offset = gst.getLst(child1->type.type).getEntry(child2->value).offset;
+	ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n\taddi $s0, $s0," + to_string(offset) + "\n";
+	
+	if (location) {
+		// push to stack sum of the return values of stack
+		ret += "\taddi $sp, $sp, -4\n\tsw $s0, 0($sp)\n\n";
+	} else {
+		int obj_width = type.getWidth();
+		ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
+		ret += copy(obj_width, "($s0)", "($sp)", 4-obj_width, 0);
+	}	
+	return ret;	
 }
 
 void Member::assignReg() {
@@ -975,9 +914,6 @@ Arrow::Arrow(ExpAst* child1, RefAst* child2){
 }
 
 void Arrow::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label <<" (";
 	child1 ->print();
 	cerr << ") (";
@@ -985,8 +921,26 @@ void Arrow::print(){
 	cerr<<") ";
 }
 
+// VERIFIED
 string Arrow::generate_code(const LocalSymbolTable& lstt, bool location) {
-    string ret = "";
+	string ret = "";
+	ret += child1->generate_code(lstt, 0);
+	// no need to generate code for child2 (it is an identifier), need it for calculating the offset
+	// look up child1->type.type in the lst; child2 ka offset nikalo is struct k liye
+	int offset = gst.getLst(child1->type.type).getEntry(child2->value).offset;
+
+	ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n\taddi $s0, $s0," + to_string(offset) + "\n";
+	if (location) {
+		// push to stack sum of the return values of stack
+		ret += "\taddi $sp, $sp, -4\n\tsw $s0, 0($sp)\n\n";
+	}
+	else {
+		int obj_width = type.getWidth();
+		ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
+		ret += copy(obj_width, "($s0)", "($sp)", 4-obj_width, 0);
+	}
+	return ret;/*
+	string ret = "";
 
     // left wale pe location chahiye
     ret += child1->generate_code(lstt, 0);
@@ -1016,9 +970,8 @@ string Arrow::generate_code(const LocalSymbolTable& lstt, bool location) {
         }
         
         ret += "\n";
-        
-        return ret;
-    }
+        }
+        return ret;*/
 }
 
 void Arrow::assignReg() {
@@ -1031,38 +984,24 @@ Deref::Deref(ExpAst* child1){
 }
 
 void Deref::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " (";
 	child1 ->print();
 	cerr<<") ";
 }
 
+// VERIFIED
 string Deref::generate_code(const LocalSymbolTable& lstt, bool location) {
-    string ret = "";
-    ret += child1->generate_code(lstt, 0);
-    
-    if (location) return ret;
-    
-    ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n";
+	string ret = "";
+	ret += child1->generate_code(lstt, 0);
+	// child1 will always be a pointer    
+	if (location) return ret;
+	
+	ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n";
 
-    int struct_width = type.getWidth();   // TODO initialize this value
-    ret += "# struct_width found to be " + to_string(struct_width) + "\n";
-
-    // invalidate the child1 stored in the stack ;)
-    if (struct_width != 4)
-        ret += "\taddi $sp, $sp, " + to_string((-1)*(struct_width-4)) + "\n";
-
-    // if it is a struct, need to copy struct->width number of bytes starting from the address in $s0 generated above
-    for (int i=0; i<struct_width; i += 4) {
-        ret += "\tlw $s1, " + to_string((-1)*(struct_width-4-i)) + "($s0)\n";
-        ret += "\tsw $s1, " + to_string(i) + "($sp)\n";
-    }
-
-    ret += "\n";
-
-    return ret;
+	int obj_width = type.getWidth();
+	ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
+	ret += copy(obj_width, "($s0)", "($sp)", 4-obj_width, 0);
+	return ret;
 }
 
 void Deref::assignReg() {
@@ -1075,35 +1014,20 @@ Identifier::Identifier(string value){
 }
 
 void Identifier::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " \"" << value << "\"";
 }
 
 string Identifier::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
+	int varoffset = lstt.getEntry(value).offset;
 	if (!location) {
-		int varoffset = lstt.getEntry(value).offset;
-
-        int struct_width = type.getWidth();
-	    
-	    // if it is a struct, need to copy struct->width number of bytes starting from the address in $s0 generated above
-	    for (int i=0; i<struct_width; i += 4) {
-	        ret += "\tlw $s0, " + to_string(varoffset - i) + "($fp)\n";
-	        ret += "\tsw $s0, -" + to_string(i+4) + "($sp)\n";
-	    }
-	    ret += "\taddi, $sp, $sp, -" + to_string(struct_width) + "\n";
-	    ret += "\n";
-        // else {
-        //     ret += "\tl.s $f0, " + to_string(varoffset) + "($fp)\n";
-        //     ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";
-        // }
+		int obj_width = type.getWidth();
+		ret += "\taddi $sp, $sp, -" + to_string(obj_width) + "\n";
+		ret += copy(obj_width, "($fp)", "($sp)", (4-obj_width+varoffset), 0);
 	}
 	else {
-        // return the l-value for the identifier
+		// return the l-value for the identifier
 		// get the address of this identifier on the stack and push that on the stack
-        int varoffset = lstt.getEntry(value).offset;
 		ret += "\taddi $s0, $fp, " + to_string(varoffset) + "\n\taddi $sp, $sp, -4\n\tsw $s0, 0($sp)\n\n";
 	}
 	return ret;
@@ -1120,9 +1044,6 @@ ArrayRef::ArrayRef(ExpAst* child1, ExpAst* child2){
 }
 
 void ArrayRef::print(){
-	cerr << "#";
-	type.print();
-	cerr << "#";
 	cerr << label << " (";
 	child1 ->print();
 	cerr << ") (";
@@ -1132,58 +1053,36 @@ void ArrayRef::print(){
 
 string ArrayRef::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
-    
-    // if array is local, location = 1 for child1, = 0 otherwise
-    abstract_astnode* t = child1;
+	
+	abstract_astnode* t = child1;
 	while(t->label!="Id") t = t->child1;
 	string id = t->value;
+	// if array is local, location = 1 for child1, = 0 otherwise
+	if (lstt.getEntry(id).symbol_scope=="local")
+		ret += child1->generate_code(lstt, 1);
+	else
+		ret += child1->generate_code(lstt, 0);
 
-    if (lstt.getEntry(id).symbol_scope=="local") {
-        ret += "#local array found\n";
-        ret += child1->generate_code(lstt, 1);
-    }
-    else {
-        ret += "#param array found\n";
-        ret += child1->generate_code(lstt, 0);
-    }
+	ret += child2->generate_code(lstt, 0);
 
-    ret += child2->generate_code(lstt, 0);
-
-    // TODO find equivalent to_integer in C++ 11
-    int n=1;
-    for(int i=0; i<type.vec.size(); i++)
-        n = n*stoi(type.vec[i]);
-
-    n *= type.getWidth();
-    ret += "# found offset to be " + to_string(n) +"\n";
-    
-    // computing the address of the array reference
-    ret += "\tlw $s0, 4($sp)\n\tlw $s1, 0($sp)\n\taddi $s2, $0, " + to_string((-1)*n) + "\n\tmul $s1, $s1, $s2\n";
-    ret += "\tadd $s0, $s0, $s1\n";
-    
-    if (!location) {
-        // compute the width of the arrayref thing
-        int struct_width = type.getWidth(); 
-        ret += "# struct_width found to be " + to_string(struct_width) + "\n";
-
-        // invalidate the child1 stored in the stack ;)
-        if (struct_width == 4)
-            ret += "\taddi $sp, $sp, 4\n";
-        if (struct_width > 8)
-            ret += "\taddi $sp, $sp, " + to_string((-1)*(struct_width-8)) + "\n";
-
-        // if it is a struct, need to copy struct->width number of bytes starting from the address in $s0 generated above
-        for (int i=0; i<struct_width; i += 4) {
-            ret += "\tlw $s1, " + to_string((-1)*(struct_width-4-i)) + "($s0)\n";
-            ret += "\tsw $s1, " + to_string(i) + "($sp)\n";
-        }
-        
-        ret += "\n";
-                                       
-    } else {
-        ret += "\taddi $sp, $sp, 4\n\tsw $s0, 0($sp)\n\n";
-    }
-    return ret;
+	int n=1;
+	for(int i=0; i<type.vec.size(); i++)
+		n = n*stoi(type.vec[i]);
+	// multiply by type width and offset is negative wrt to pointer
+	n *= type.getWidth();
+	n *= -1;
+	// computing the address of the array reference
+	ret += "\tlw $s0, 4($sp)\n\tlw $s1, 0($sp)\n\taddi $sp, $sp, 8\n\taddi $s2, $0, " + to_string(n) + "\n";
+	ret += "\tmul $s1, $s1, $s2\n\tadd $s0, $s0, $s1\n";
+	
+	if (!location) {
+		int obj_width = type.getWidth(); 
+		ret += "\taddi $sp, $sp, -" + to_string(obj_width) + "\n";
+		ret += copy(obj_width, "($s0)", "($sp)", 4-obj_width, 0);
+	} else {
+		ret += "\taddi $sp, $sp, -4\n\tsw $s0, 0($sp)\n\n";
+	}
+	return ret;
 }
 
 void ArrayRef::assignReg() {
