@@ -1,3 +1,31 @@
+generate_code has an additional parameter: PushToStack; if true, the code NEEDS the values in the stack
+global variable currentDepth
+temporary registers: $t0-$t9, $f0-$f15 except $f12
+permanent registers: $s0-$s7, $f16-$f31
+
+list of such nodes, with contents : register name, valid, depth, value, offset; if offset is 0, it is a constant
+
+in identifier::generate_code, check if already mapped to a register. if not, map a register node to this "stack offset".
+when exiting a function; invalidate all register nodes with currentDepth as depth
+
+when evaluating an expression, put that into a temporary register and put that in that ast
+if no register available, store to stack and set that as offset in the ast_node
+
+string
+
+
+
+
+
+
+
+
+
+
+
+
+
+==============================================================================================================================
 
 add a priority of children and whether_assign_present to the node; to be determined while computing the reqreg
 
@@ -31,15 +59,3 @@ f(node,l) {
 
 	// update node.reqreg
 }
-
-
-=======================================================================================================
-
-To support floats as well, we need to check the type of operand at each step and typecast as the need be. Then use the correct instruction.
-
--> mtc1 $s0, $f12; cvt.s.w FRdest, FRsrc // reg to float
--> mfc1 $t1, $f12; cvt.w.s FRdest, FRsrc // float to reg
--> add.s $f1, $f1, $f1 // sub, mul, div, rem
--> l.s FRdest, mem
--> s.s FRsrc, mem
--> mov.s FRdest, FRsrc

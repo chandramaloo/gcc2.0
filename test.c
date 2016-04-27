@@ -1,6 +1,6 @@
+#include <stdio.h>
 int main() {
-  float i;
-  i = 20;
-  printf((i+2*i)*(i+2*i), "\n");
-  printf(i);
+  int a, b;
+  b = ((a=4)+(a=2)+(a=3)+(a=7));
+  printf("%d\n", b);
 }

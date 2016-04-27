@@ -1,5 +1,8 @@
 	.data
-L0:	.asciiz	"\n"
+L0:	.asciiz	"true\n"
+L1:	.asciiz	"false\n"
+L2:	.asciiz	"true\n"
+L3:	.asciiz	"false\n"
 	.text
 
 main:
@@ -9,9 +12,9 @@ main:
 	move $fp, $sp
 
 # space for local variables
-	addi $sp, $sp, -4
+	addi $sp, $sp, -8
 
-	addi $s0, $0, 20
+	addi $s0, $0, 0
 	addi $sp, $sp, -4
 	sw $s0, 0($sp)
 
@@ -24,85 +27,83 @@ main:
 	l.s $f0, 0($sp)
 	cvt.s.w $f0, $f0
 	s.s $f0, 0($s0)
-# printf prints an expression
-	lw $s0, -4($fp)
-	sw $s0, -4($sp)
-	addi, $sp, $sp, -4
-
-	addi $s0, $0, 2
+	addi $s0, $0, 0
 	addi $sp, $sp, -4
 	sw $s0, 0($sp)
 
-	lw $s0, -4($fp)
-	sw $s0, -4($sp)
-	addi, $sp, $sp, -4
+	lw $s0, 0($sp)
+	neg $s0, $s0
+	sw $s0, 0($sp)
 
-# operating to produce a float
-	l.s $f0, 4($sp)
-	cvt.s.w $f0, $f0
-	l.s $f1, 0($sp)
-	addi $sp, $sp, 4
-	mul.s $f0, $f0, $f1
-	s.s $f0, 0($sp)
-
-# operating to produce a float
-	l.s $f0, 4($sp)
-	l.s $f1, 0($sp)
-	addi $sp, $sp, 4
-	add.s $f0, $f0, $f1
-	s.s $f0, 0($sp)
-
-	lw $s0, -4($fp)
-	sw $s0, -4($sp)
-	addi, $sp, $sp, -4
-
-	addi $s0, $0, 2
+	addi $s0, $fp, -8
 	addi $sp, $sp, -4
 	sw $s0, 0($sp)
 
-	lw $s0, -4($fp)
-	sw $s0, -4($sp)
-	addi, $sp, $sp, -4
-
-# operating to produce a float
-	l.s $f0, 4($sp)
+	lw $s0, 0($sp)
+	addi $sp, $sp, 4
+	l.s $f0, 0($sp)
 	cvt.s.w $f0, $f0
-	l.s $f1, 0($sp)
-	addi $sp, $sp, 4
-	mul.s $f0, $f0, $f1
-	s.s $f0, 0($sp)
+	s.s $f0, 0($s0)
+	addi $sp, $sp, -4
+	lw $s1, -4($fp)
+	sw $s1, 0($sp)
 
-# operating to produce a float
-	l.s $f0, 4($sp)
-	l.s $f1, 0($sp)
-	addi $sp, $sp, 4
-	add.s $f0, $f0, $f1
-	s.s $f0, 0($sp)
+	addi $s0, $0, 0
+	addi $sp, $sp, -4
+	sw $s0, 0($sp)
 
-# operating to produce a float
-	l.s $f0, 4($sp)
-	l.s $f1, 0($sp)
+# operating to produce an integer
+	lw $s0, 4($sp)
+	lw $s1 0($sp)
 	addi $sp, $sp, 4
-	mul.s $f0, $f0, $f1
-	s.s $f0, 0($sp)
+	or $s0, $s0, $s1
+	sw $s0, 0($sp)
 
-	l.s $f12, 0($sp)
+	lw $s0, 0($sp)
 	addi $sp, $sp, 4
-	addi $v0, $0, 2
-	syscall
+	beq $s0, $0, L4
 # printf prints a string const
 	la $a0, L0
 	addi $v0, $0, 4
 	syscall
-# printf prints a float identifier
-	lw $s0, -4($fp)
-	sw $s0, -4($sp)
-	addi, $sp, $sp, -4
-
-	l.s $f12, 0($sp)
-	addi $sp, $sp, 4
-	addi $v0, $0, 2
+	j L5
+L4:
+# printf prints a string const
+	la $a0, L1
+	addi $v0, $0, 4
 	syscall
+L5:
+
+	addi $sp, $sp, -4
+	lw $s1, -8($fp)
+	sw $s1, 0($sp)
+
+	addi $s0, $0, 0
+	addi $sp, $sp, -4
+	sw $s0, 0($sp)
+
+# operating to produce an integer
+	lw $s0, 4($sp)
+	lw $s1 0($sp)
+	addi $sp, $sp, 4
+	or $s0, $s0, $s1
+	sw $s0, 0($sp)
+
+	lw $s0, 0($sp)
+	addi $sp, $sp, 4
+	beq $s0, $0, L6
+# printf prints a string const
+	la $a0, L2
+	addi $v0, $0, 4
+	syscall
+	j L7
+L6:
+# printf prints a string const
+	la $a0, L3
+	addi $v0, $0, 4
+	syscall
+L7:
+
 
 
 mainReturn:
@@ -111,3 +112,4 @@ mainReturn:
 	lw $fp, 0($fp)
 	addi $sp, $sp, 8
 	jr $ra
+

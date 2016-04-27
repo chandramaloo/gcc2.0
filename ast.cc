@@ -324,10 +324,10 @@ void GlobalSymbolTable::addGlobalSymbol(SymTabEntry entry){
 	this->GlobalSymbols.push_back(entry);
 }
 
-
 // All about ASTs
 StmtAst::StmtAst(){
 	astnode_type = StmtAstType;
+	reg = "";
 }
 
 ExpAst::ExpAst(){
@@ -653,39 +653,31 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 	else {
 		// pop the two children from stack and perform the binary operation
 		ret += "# operating to produce a float\n";
+		string label = newlabel(), label2 = newlabel();
 
 		ret += "\tl.s $f0, 4($sp)\n";
-		if (child1->type.type == "int")
+		if (child1->type.type == "int"){
 			ret += "\tcvt.s.w $f0, $f0\n";
-
+		}
 		ret += "\tl.s $f1, 0($sp)\n\taddi $sp, $sp, 4\n";
-		if (child2->type.type == "int")
+		if (child2->type.type == "int"){
 			ret += "\tcvt.s.w $f1, $f1\n";
-
-		// if(label == "OR") {
-		// 	ret += "\tor $s0, $s0, $s1\n";
-		// }
-		// else if(label == "AND") {
-		// 	ret += "\tand $s0, $s0, $s1\n";
-		// }
-		// else if(label == "EQ") {
-		// 	ret += "\tseq $s0, $s0, $s1\n";
-		// }
-		// else if(label == "NE") {
-		// 	ret += "\tsne $s0, $s0, $s1\n";
-		// }
-		// else
+		}
 		if(label == "LT-FLOAT") {
-			ret += "\tc.lt.s $f0, $f1\n";
+			ret += "\tc.lt.s $f0, $f1\nbczt " + label + "\n";
+			ret += label + ":\n\taddi $s0, $0, 1\n\taddi$sp, $sp, -4\n\tsw $s0, 0($sp)\n";
 		}
 		else if(label == "LE_OP-FLOAT") {
-			ret += "\tc.le.s $f0, $f1\n";
+			ret += "\tc.le.s $f0, $f1\nbczt " + label + "\n";
+			ret += label + ":\n\taddi $s0, $0, 1\n\taddi$sp, $sp, -4\n\tsw $s0, 0($sp)\n";
 		}
 		else if(label == "GE_OP-FLOAT") {
-			ret += "\tc.le.s $f1, $f0\n";
+			ret += "\tc.le.s $f1, $f0\nbczt " + label + "\n";
+			ret += label + ":\n\taddi $s0, $0, 1\n\taddi$sp, $sp, -4\n\tsw $s0, 0($sp)\n";
 		}
 		else if(label == "GT-FLOAT") {
-			ret += "\tc.lt.s $f1, $f0\n";
+			ret += "\tc.lt.s $f1, $f0\nbczt " + label + "\n";
+			ret += label + ":\n\taddi $s0, $0, 1\n\taddi$sp, $sp, -4\n\tsw $s0, 0($sp)\n";
 		}
 		else if(label == "PLUS-FLOAT") {
 			ret += "\tadd.s $f0, $f0, $f1\n";
@@ -733,7 +725,7 @@ string Assign::generate_code(const LocalSymbolTable& lstt, bool location) {
 
 	// load child1 from stack into $s0 and sp+=4
 	ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n";
-	
+
 	// handle separately the case that typecasting needs to be done
 	if (child1->type.type == "int" && child1->type.ptr==0 && child1->type.vec.size()==0) {
 		if (child2->type.type == "float" && child2->type.ptr==0 && child2->type.vec.size()==0) {
@@ -967,7 +959,7 @@ string Member::generate_code(const LocalSymbolTable& lstt, bool location) {
 	// look child1->type.type up in the lst; child2 ka offset nikalo is struct k liye
 	int offset = gst.getLst(child1->type.type).getEntry(child2->value).offset;
 	ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n\taddi $s0, $s0," + to_string(offset) + "\n";
-	
+
 	if (location) {
 		// push to stack sum of the return values of stack
 		ret += "\taddi $sp, $sp, -4\n\tsw $s0, 0($sp)\n\n";
@@ -975,8 +967,8 @@ string Member::generate_code(const LocalSymbolTable& lstt, bool location) {
 		int obj_width = type.getWidth();
 		ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
 		ret += copy(obj_width, "($s0)", "($sp)", 4-obj_width, 0);
-	}	
-	return ret;	
+	}
+	return ret;
 }
 
 void Member::assignReg() {
@@ -1037,9 +1029,9 @@ void Deref::print(){
 string Deref::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
 	ret += child1->generate_code(lstt, 0);
-	// child1 will always be a pointer    
+	// child1 will always be a pointer
 	if (location) return ret;
-	
+
 	ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n";
 	int obj_width = type.getWidth();
 	ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
@@ -1096,11 +1088,11 @@ void ArrayRef::print(){
 
 string ArrayRef::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
-    
+
     abstract_astnode* t = child1;
 	while(t->label!="Id") t = t->child1;
 	string id = t->value;
-	
+
 	// if array is local, location = 1 for child1, = 0 otherwise
 	if (lstt.getEntry(id).symbol_scope=="local")
 		ret += child1->generate_code(lstt, 1);
@@ -1118,9 +1110,9 @@ string ArrayRef::generate_code(const LocalSymbolTable& lstt, bool location) {
 	// computing the address of the array reference
 	ret += "\tlw $s0, 4($sp)\n\tlw $s1, 0($sp)\n\taddi $sp, $sp, 8\n\taddi $s2, $0, " + to_string(n) + "\n";
 	ret += "\tmul $s1, $s1, $s2\n\tadd $s0, $s0, $s1\n";
-	
+
 	if (!location) {
-		int obj_width = type.getWidth(); 
+		int obj_width = type.getWidth();
 		ret += "\taddi $sp, $sp, -" + to_string(obj_width) + "\n";
 		ret += copy(obj_width, "($s0)", "($sp)", 4-obj_width, 0);
 	} else {

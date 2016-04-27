@@ -1,7 +1,7 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-// first parameters of ArrayRef, Member, Arrow are set to ExpAst rather than RefAst 
+// first parameters of ArrayRef, Member, Arrow are set to ExpAst rather than RefAst
 
 enum typeExp {StmtAstType, ExpAstType, RefAstType};
 class LocalSymbolTable;
@@ -36,10 +36,10 @@ public:
 	Symbol_Type symbol_type;
 	int width, offset;
 	LocalSymbolTable *symtab;
-	
+
 	SymTabEntry();
 	SymTabEntry(const SymTabEntry&);
-	SymTabEntry(string,string,string,Symbol_Type,int,int);	
+	SymTabEntry(string,string,string,Symbol_Type,int,int);
 	SymTabEntry(string,string,string,Symbol_Type,int,int,LocalSymbolTable*);
 	void print();
 };
@@ -58,7 +58,7 @@ public:
 	bool contains(string symbol_name) const;
 	void checkStructContents();
 	void adjustParamOffset();
-	SymTabEntry getEntry(string symbol_name) const;	
+	SymTabEntry getEntry(string symbol_name) const;
 	void addParam(SymTabEntry);
 	void addParams(vector<SymTabEntry>);
 };
@@ -87,7 +87,7 @@ class symbolTable;
 class abstract_astnode
 {
 public:
-	string label, value, string_label;
+	string label, value, string_label, reg;
 	int reqReg;
 	bool lvalue;
 	Symbol_Type type;
