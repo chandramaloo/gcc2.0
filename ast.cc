@@ -27,13 +27,16 @@ void setArrayWidth(vector<string> arr){
 
 // create space for local variables on stack
 string genLocalVar(const LocalSymbolTable& lstt){
-	int ret = 0;
+  int local_vars_width = 0;
 	for(int i=0; i < lstt.rows.size(); i++){
 		if(lstt.rows[i].symbol_scope=="local"){
-			ret += lstt.rows[i].width;
+			local_vars_width += lstt.rows[i].width;
 		}
 	}
-	return "\taddi $sp, $sp, -" + to_string(ret) + "\n";
+	string ret = "";
+	ret += "# space for local variables\n";
+	ret += "\taddi $sp, $sp, -" + to_string(local_vars_width) + "\n\n";
+	return ret;
 }
 
 // offsetFrom(from) should point to top of block
@@ -113,7 +116,7 @@ bool Symbol_Type::canCast(Symbol_Type a){
 Symbol_Type Symbol_Type::castType(Symbol_Type a){
 	if(this->type == "float" && a.type == "int"){
 		return *this;
-	} 
+	}
 	else if(this->type == "int" && a.type == "float"){
 		return a;
 	}
@@ -128,11 +131,11 @@ int Symbol_Type::getWidth(){
 }
 
 //SymtabEntry Class Functions
-SymTabEntry::SymTabEntry(){ 
-	
+SymTabEntry::SymTabEntry(){
+
 }
 
-SymTabEntry::SymTabEntry(const SymTabEntry& ste){ 
+SymTabEntry::SymTabEntry(const SymTabEntry& ste){
 	this->symbol_name = ste.symbol_name;
 	this->symbol_class = ste.symbol_class;
 	this->symbol_scope = ste.symbol_scope;
@@ -141,7 +144,7 @@ SymTabEntry::SymTabEntry(const SymTabEntry& ste){
 	this->offset = ste.offset;
 }
 
-SymTabEntry::SymTabEntry(string symbol_name,string symbol_class,string symbol_scope, 
+SymTabEntry::SymTabEntry(string symbol_name,string symbol_class,string symbol_scope,
 	Symbol_Type symbol_type, int width, int offset){
 	this->symbol_name = symbol_name;
 	this->symbol_class = symbol_class;
@@ -151,7 +154,7 @@ SymTabEntry::SymTabEntry(string symbol_name,string symbol_class,string symbol_sc
 	this->offset = offset;
 }
 
-SymTabEntry::SymTabEntry(string symbol_name,string symbol_class,string symbol_scope, 
+SymTabEntry::SymTabEntry(string symbol_name,string symbol_class,string symbol_scope,
 	Symbol_Type symbol_type, int width, int offset, LocalSymbolTable* symtab){
 	this->symbol_name = symbol_name;
 	this->symbol_class = symbol_class;
@@ -163,7 +166,7 @@ SymTabEntry::SymTabEntry(string symbol_name,string symbol_class,string symbol_sc
 }
 
 void SymTabEntry::print(){
-	fprintf(stderr, "%s %s %s ",this->symbol_name.c_str(), this->symbol_class.c_str(), 
+	fprintf(stderr, "%s %s %s ",this->symbol_name.c_str(), this->symbol_class.c_str(),
 		this->symbol_scope.c_str());
 	this->symbol_type.print();
 	fprintf(stderr, " %d %d\n", this->width, this->offset);
@@ -221,14 +224,14 @@ bool LocalSymbolTable::match(vector<ExpAst*> temp){
 		}
 		j++;
 	}
-	return (j==temp.size());
+	return (j == temp.size());
 }
 
 void LocalSymbolTable::adjustParamOffset(){
 
 	for(int i=0; i<rows.size(); i++){
 		if(rows[i].symbol_scope=="param"){
-			rows[i].offset = meta->width - rows[i].offset + 12; 
+			rows[i].offset = meta->width - rows[i].offset + 12;
 		}
 	}
 }
@@ -246,7 +249,7 @@ void LocalSymbolTable::checkStructContents(){
 	}
 }
 
-SymTabEntry LocalSymbolTable::getEntry(string symbol_name) const{ 
+SymTabEntry LocalSymbolTable::getEntry(string symbol_name) const{
 	for(int i=0; i<rows.size(); i++){
 		if(rows[i].symbol_name == symbol_name)
 			return rows[i];
@@ -254,7 +257,7 @@ SymTabEntry LocalSymbolTable::getEntry(string symbol_name) const{
 	SymTabEntry a;
 	a.symbol_type.type = "null";
 	return a;
-}	
+}
 
 bool LocalSymbolTable::contains(string symbol_name) const{
 	for(int i=0; i<rows.size(); i++){
@@ -262,7 +265,7 @@ bool LocalSymbolTable::contains(string symbol_name) const{
 			return true;
 	}
 	return false;
-}	
+}
 
 Symbol_Type LocalSymbolTable::getType(string symbol_name) const{
 	for(int i=0; i<rows.size(); i++){
@@ -272,7 +275,7 @@ Symbol_Type LocalSymbolTable::getType(string symbol_name) const{
 	Symbol_Type a;
 	a.type="null";
 	return a;
-}	
+}
 
 // GlobalSymbolTable Class Functions
 GlobalSymbolTable::GlobalSymbolTable(){
@@ -284,7 +287,7 @@ void GlobalSymbolTable::print(){
 	for(int i=0; i < this->GlobalSymbols.size(); i++)
 		this->GlobalSymbols[i].print();
 	fprintf(stderr, "\nContents in LSTs:\n");
-	for(map<string, LocalSymbolTable>::iterator it = this->mapper.begin(); it != this->mapper.end(); it++) 
+	for(map<string, LocalSymbolTable>::iterator it = this->mapper.begin(); it != this->mapper.end(); it++)
 		if (it->first != "printf")
 			it->second.print();
 	fprintf(stderr, "\n");
@@ -301,7 +304,7 @@ bool GlobalSymbolTable::containsVar(string symbol_name){
 			return true;
 	}
 	return false;
-}	
+}
 
 bool GlobalSymbolTable::containsFun(string symbol_name){
 	for(int i=0; i<GlobalSymbols.size(); i++){
@@ -310,7 +313,7 @@ bool GlobalSymbolTable::containsFun(string symbol_name){
 			return true;
 	}
 	return false;
-}	
+}
 
 void GlobalSymbolTable::addLocalSymbolTable(string funcName, LocalSymbolTable funcTable){
 	this->mapper[funcName] = funcTable;
@@ -324,7 +327,7 @@ void GlobalSymbolTable::addGlobalSymbol(SymTabEntry entry){
 
 // All about ASTs
 StmtAst::StmtAst(){
-	astnode_type = StmtAstType;	
+	astnode_type = StmtAstType;
 }
 
 ExpAst::ExpAst(){
@@ -347,7 +350,7 @@ void Block::print(){
 string Block::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
 	ret += label + ":\n";
-	ret += "\taddi $sp, $sp, -8\n\tsw $ra, 4($sp)\n\tsw $fp, 0($sp)\n\tmove $fp, $sp\n";	// store dynamic link
+	ret += "\taddi $sp, $sp, -8\n\tsw $ra, 4($sp)\n\tsw $fp, 0($sp)\n\tmove $fp, $sp\n\n";	// store dynamic link
 	ret += genLocalVar(lstt);
 	ret += child1->generate_code(lstt, location);
 	ret += "\n" + label + "Return:\n\tlw $ra, 4($fp)\n\tmove $sp, $fp\n\tlw $fp, 0($fp)\n\taddi $sp, $sp, 8\n\tjr $ra\n\n";
@@ -489,10 +492,10 @@ string While::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string label = newlabel(), label2 = newlabel();
 	ret += label + ":\n";
 	ret += child1->generate_code(lstt, 0);
-	
+
 	// if(!top(rstack)) goto label2
 	ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n\tbeq $s0, $0, " + label2 + "\n";
-	
+
 	ret += child2->generate_code(lstt, location);
 	ret += "\tj " + label + "\n" + label2 + ":\n\n";
 	return ret;
@@ -544,7 +547,7 @@ void For::assignReg() {
 	child1->assignReg();
 	child2->assignReg();
 	child3->assignReg();
-	child4->assignReg();	
+	child4->assignReg();
 }
 
 OpUnary::OpUnary(string label, ExpAst* child1){
@@ -598,51 +601,106 @@ void OpBinary::print(){
 	cerr<<") ";
 }
 
+// TODO make use of the flag set by float instructions
 string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
 	ret += child1->generate_code(lstt, 0);
 	ret += child2->generate_code(lstt, 0);
-	// pop the two children from stack and perform the binary operation
-	ret += "\tlw $s0, 4($sp)\n\tlw $s1 0($sp)\n\taddi $sp, $sp, 4\n";
 
-	if(label == "OR") {
-		ret += "\tor $s0, $s0, $s1\n";
-	}
-	else if(label == "AND") {
-		ret += "\tand $s0, $s0, $s1\n";
-	}
-	else if(label == "EQ") {
-		ret += "\tseq $s0, $s0, $s1\n";
-	}
-	else if(label == "NE") {
-		ret += "\tsne $s0, $s0, $s1\n";
-	}
-	else if(label == "LT-INT") {
-		ret += "\tslt $s0, $s0, $s1\n";
-	}
-	else if(label == "LE_OP-INT") {
-		ret += "\tsle $s0, $s0, $s1\n";
-	}
-	else if(label == "GE_OP-INT") {
-		ret += "\tsge $s0, $s0, $s1\n";
-	}
-	else if(label == "GT-INT") {
-		ret += "\tsgt $s0, $s0, $s1\n";
-	}
-	else if(label == "PLUS-INT") {
-		ret += "\tadd $s0, $s0, $s1\n";
-	}
-	else if(label == "MINUS-INT") {
-		ret += "\tsub $s0, $s0, $s1\n";
-	}
-	else if(label == "MULT-INT") {
-		ret += "\tmul $s0, $s0, $s1\n";
-	}
-	else if(label == "DIV-INT") {
-		ret += "\tdiv $s0, $s0, $s1\n";
-	}
-	ret += "\tsw $s0, 0($sp)\n\n";
+	if (type.type == "int") {
+		// pop the two children from stack and perform the binary operation
+		ret += "# operating to produce an integer\n";
+		ret += "\tlw $s0, 4($sp)\n\tlw $s1 0($sp)\n\taddi $sp, $sp, 4\n";
 
+		if(label == "OR") {
+			ret += "\tor $s0, $s0, $s1\n";
+		}
+		else if(label == "AND") {
+			ret += "\tand $s0, $s0, $s1\n";
+		}
+		else if(label == "EQ") {
+			ret += "\tseq $s0, $s0, $s1\n";
+		}
+		else if(label == "NE") {
+			ret += "\tsne $s0, $s0, $s1\n";
+		}
+		else if(label == "LT-INT") {
+			ret += "\tslt $s0, $s0, $s1\n";
+		}
+		else if(label == "LE_OP-INT") {
+			ret += "\tsle $s0, $s0, $s1\n";
+		}
+		else if(label == "GE_OP-INT") {
+			ret += "\tsge $s0, $s0, $s1\n";
+		}
+		else if(label == "GT-INT") {
+			ret += "\tsgt $s0, $s0, $s1\n";
+		}
+		else if(label == "PLUS-INT") {
+			ret += "\tadd $s0, $s0, $s1\n";
+		}
+		else if(label == "MINUS-INT") {
+			ret += "\tsub $s0, $s0, $s1\n";
+		}
+		else if(label == "MULT-INT") {
+			ret += "\tmul $s0, $s0, $s1\n";
+		}
+	  else if(label == "DIV-INT") {
+	      ret += "\tdiv $s0, $s0, $s1\n";
+	  }
+		ret += "\tsw $s0, 0($sp)\n\n";
+	}
+	else {
+		// pop the two children from stack and perform the binary operation
+		ret += "# operating to produce a float\n";
+
+		ret += "\tl.s $f0, 4($sp)\n";
+		if (child1->type.type == "int")
+			ret += "\tcvt.s.w $f0, $f0\n";
+
+		ret += "\tl.s $f1, 0($sp)\n\taddi $sp, $sp, 4\n";
+		if (child2->type.type == "int")
+			ret += "\tcvt.s.w $f1, $f1\n";
+
+		// if(label == "OR") {
+		// 	ret += "\tor $s0, $s0, $s1\n";
+		// }
+		// else if(label == "AND") {
+		// 	ret += "\tand $s0, $s0, $s1\n";
+		// }
+		// else if(label == "EQ") {
+		// 	ret += "\tseq $s0, $s0, $s1\n";
+		// }
+		// else if(label == "NE") {
+		// 	ret += "\tsne $s0, $s0, $s1\n";
+		// }
+		// else
+		if(label == "LT-FLOAT") {
+			ret += "\tc.lt.s $f0, $f1\n";
+		}
+		else if(label == "LE_OP-FLOAT") {
+			ret += "\tc.le.s $f0, $f1\n";
+		}
+		else if(label == "GE_OP-FLOAT") {
+			ret += "\tc.le.s $f1, $f0\n";
+		}
+		else if(label == "GT-FLOAT") {
+			ret += "\tc.lt.s $f1, $f0\n";
+		}
+		else if(label == "PLUS-FLOAT") {
+			ret += "\tadd.s $f0, $f0, $f1\n";
+		}
+		else if(label == "MINUS-FLOAT") {
+			ret += "\tsub.s $f0, $f0, $f1\n";
+		}
+		else if(label == "MULT-FLOAT") {
+			ret += "\tmul.s $f0, $f0, $f1\n";
+		}
+		else if(label == "DIV-FLOAT") {
+			ret += "\tdiv.s $f0, $f0, $f1\n";
+		}
+		ret += "\ts.s $f0, 0($sp)\n\n";
+	}
 	return ret;
 }
 
@@ -676,6 +734,24 @@ string Assign::generate_code(const LocalSymbolTable& lstt, bool location) {
 	// load child1 from stack into $s0 and sp+=4
 	ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n";
 	
+	// handle separately the case that typecasting needs to be done
+	if (child1->type.type == "int" && child1->type.ptr==0 && child1->type.vec.size()==0) {
+		if (child2->type.type == "float" && child2->type.ptr==0 && child2->type.vec.size()==0) {
+			// typecast from float to int
+			ret += "\tl.s $f0, 0($sp)\n\tcvt.w.s $f0, $f0\n\ts.s $f0, 0($s0)\n";
+		} else if (child2->type.type == "int" && child2->type.ptr==0 && child2->type.vec.size()==0) {
+			ret += "\tlw $s1, 0($sp)\n\tsw $s1, 0($s0)\n";
+		}
+		return ret;
+
+	} else if(child1->type.type == "float" && child1->type.ptr==0 && child1->type.vec.size()==0) {
+		if (child2->type.type == "int" && child2->type.ptr==0 && child2->type.vec.size()==0) {
+			ret += "\tl.s $f0, 0($sp)\n\tcvt.s.w $f0, $f0\n\ts.s $f0, 0($s0)\n";
+		} else if (child2->type.type == "float" && child2->type.ptr==0 && child2->type.vec.size()==0) {
+			ret += "\tl.s $f0, 0($sp)\ns.s $f0, 0($s0)\n";
+		}
+		return ret;
+	}
 	// copy width bytes from current $sp to $s0
 	int obj_width = child2->type.getWidth();
 	ret += copy(obj_width,"($sp)", "($s0)", 0, 4-obj_width);
@@ -866,7 +942,7 @@ string Pointer::generate_code(const LocalSymbolTable& lstt, bool location) {
 }
 
 void Pointer::assignReg() {
-	
+
 }
 
 Member::Member(ExpAst* child1, RefAst* child2){
@@ -904,7 +980,7 @@ string Member::generate_code(const LocalSymbolTable& lstt, bool location) {
 }
 
 void Member::assignReg() {
-	
+
 }
 
 Arrow::Arrow(ExpAst* child1, RefAst* child2){
@@ -939,43 +1015,11 @@ string Arrow::generate_code(const LocalSymbolTable& lstt, bool location) {
 		ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
 		ret += copy(obj_width, "($s0)", "($sp)", 4-obj_width, 0);
 	}
-	return ret;/*
-	string ret = "";
-
-    // left wale pe location chahiye
-    ret += child1->generate_code(lstt, 0);
-    
-    // no need to generate code for child2 (it is an identifier), need it for calculating the offset
-    
-    // look up child1->type.type in the lst; child2 ka offset nikalo is struct k liye
-    int offset = gst.getLst(child1->type.type).getEntry(child2->value).offset;
-
-    ret += "\tlw $s0, 0($sp)\n\taddi $s1, $0," + to_string(offset) + "\n\tadd $s0, $s0, $s1\n";
-    
-    if (location) {
-        // push to stack sum of the return values of stack
-        ret += "\tsw $s0, 0($sp)\n\n";
-    } else {
-        int struct_width = type.getWidth();
-        ret += "# struct_width found to be " + to_string(struct_width) + "\n";
-
-        // invalidate the child1 stored in the stack ;)
-        if (struct_width != 4)
-            ret += "\taddi $sp, $sp, " + to_string((-1)*(struct_width-4)) + "\n";
-
-        // if it is a struct, need to copy struct->width number of bytes starting from the address in $s0 generated above
-        for (int i=0; i<struct_width; i += 4) {
-            ret += "\tlw $s1, " + to_string((-1)*(struct_width-4-i)) + "($s0)\n";
-            ret += "\tsw $s1, " + to_string(i) + "($sp)\n";
-        }
-        
-        ret += "\n";
-        }
-        return ret;*/
+	return ret;
 }
 
 void Arrow::assignReg() {
-	
+
 }
 
 Deref::Deref(ExpAst* child1){
@@ -997,7 +1041,6 @@ string Deref::generate_code(const LocalSymbolTable& lstt, bool location) {
 	if (location) return ret;
 	
 	ret += "\tlw $s0, 0($sp)\n\taddi $sp, $sp, 4\n";
-
 	int obj_width = type.getWidth();
 	ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
 	ret += copy(obj_width, "($s0)", "($sp)", 4-obj_width, 0);
@@ -1005,7 +1048,7 @@ string Deref::generate_code(const LocalSymbolTable& lstt, bool location) {
 }
 
 void Deref::assignReg() {
-	
+
 }
 
 Identifier::Identifier(string value){
@@ -1053,10 +1096,11 @@ void ArrayRef::print(){
 
 string ArrayRef::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
-	
-	abstract_astnode* t = child1;
+    
+    abstract_astnode* t = child1;
 	while(t->label!="Id") t = t->child1;
 	string id = t->value;
+	
 	// if array is local, location = 1 for child1, = 0 otherwise
 	if (lstt.getEntry(id).symbol_scope=="local")
 		ret += child1->generate_code(lstt, 1);
@@ -1086,5 +1130,5 @@ string ArrayRef::generate_code(const LocalSymbolTable& lstt, bool location) {
 }
 
 void ArrayRef::assignReg() {
-	
+
 }
