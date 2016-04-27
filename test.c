@@ -1,30 +1,19 @@
-int binary(int start, int end, int val, int a[1]){
-	int mid;
-    mid = start+end;
-    mid = mid / 2;
-    if(a[mid] == val){
-        return mid;
-    }
-    else {
-        if(start == end - 1){
-	 	     return -1;	
-        } else {
-            if( a[mid] < val){
-                return binary(mid, end, val, a);
-            }
-            else{
-                return binary(start, mid, val, a);	
-            }   
-        }
-    }
+struct S
+{
+    int a, b, c;
+};
+
+int f(struct S *A, struct S * B){
+    A->a = 1;
+    A->b = 2;
+    A->c = 3;
+    *B = *A;	//allowed??
+    printf(B->a, B->b, B->c, "\n");
 }
 
 int main()
 {
-	int a[10], i;
-	for(i=0; i<10; i++){
-		a[i] = i*i*i;
-	}
-	i = binary(0,10,64,a);
-	printf(i, " Answer\n");
+    struct S A, B;
+    f(&A,&B);
+	printf(B.a, B.b, B.c, "\n");
 }

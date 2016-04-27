@@ -706,13 +706,14 @@ string Assign::generate_code(const LocalSymbolTable& lstt, bool location) {
     // TODO check this with Maloo
     int struct_width = child2->type.getWidth();
     ret += "# " + to_string(struct_width) + " bytes to be copied due to assignment operator\n";    
-    
+
     // if it is a struct, need to copy struct->width number of bytes starting from the address in $s0 generated above
     for (int i=0; i<struct_width; i += 4) {
-        ret += "\tlw $s1, " + to_string((-1)*i) + "($sp)\n";
-        ret += "\tsw $s1, " + to_string((-1)*i) + "($s0)\n";
+        ret += "\tlw $s1, " + to_string(struct_width-4-i) + "($sp)\n";
+        ret += "\tsw $s1, -" + to_string(i) + "($s0)\n";
     }
-
+    ret += "\taddi, $sp, $sp, " + to_string(struct_width) + "\n";
+    
     ret += "\n";
 
 	return ret;
@@ -938,7 +939,7 @@ string Member::generate_code(const LocalSymbolTable& lstt, bool location) {
     // look child1->type.type up in the lst; child2 ka offset nikalo is struct k liye
     int offset = gst.getLst(child1->type.type).getEntry(child2->value).offset;
 
-    ret += "\tlw $s0, 0($sp)\n\taddi $s1, $s1," + to_string(offset) + "\n\tadd $s0, $s0, $s1\n";
+    ret += "\tlw $s0, 0($sp)\n\taddi $s1, $0," + to_string(offset) + "\n\tadd $s0, $s0, $s1\n";
     
     if (location) {
         // push to stack sum of the return values of stack
@@ -995,7 +996,7 @@ string Arrow::generate_code(const LocalSymbolTable& lstt, bool location) {
     // look up child1->type.type in the lst; child2 ka offset nikalo is struct k liye
     int offset = gst.getLst(child1->type.type).getEntry(child2->value).offset;
 
-    ret += "\tlw $s0, 0($sp)\n\taddi $s1, $s1," + to_string(offset) + "\n\tadd $s0, $s0, $s1\n";
+    ret += "\tlw $s0, 0($sp)\n\taddi $s1, $0," + to_string(offset) + "\n\tadd $s0, $s0, $s1\n";
     
     if (location) {
         // push to stack sum of the return values of stack
@@ -1084,16 +1085,22 @@ string Identifier::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
 	if (!location) {
 		int varoffset = lstt.getEntry(value).offset;
-        
-        if (lstt.getEntry(value).symbol_type.type == "int") {
-            ret += "\tlw $s0, " + to_string(varoffset) + "($fp)\n";
-            ret += "\taddi $sp, $sp, -4\n\tsw $s0, 0($sp)\n\n";
-        } else {
-            ret += "\tl.s $f0, " + to_string(varoffset) + "($fp)\n";
-            ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";
-        }
-        
-	}	else {
+
+        int struct_width = type.getWidth();
+	    
+	    // if it is a struct, need to copy struct->width number of bytes starting from the address in $s0 generated above
+	    for (int i=0; i<struct_width; i += 4) {
+	        ret += "\tlw $s0, " + to_string(varoffset - i) + "($fp)\n";
+	        ret += "\tsw $s0, -" + to_string(i+4) + "($sp)\n";
+	    }
+	    ret += "\taddi, $sp, $sp, -" + to_string(struct_width) + "\n";
+	    ret += "\n";
+        // else {
+        //     ret += "\tl.s $f0, " + to_string(varoffset) + "($fp)\n";
+        //     ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";
+        // }
+	}
+	else {
         // return the l-value for the identifier
 		// get the address of this identifier on the stack and push that on the stack
         int varoffset = lstt.getEntry(value).offset;
