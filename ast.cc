@@ -984,6 +984,26 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 			}
 			return ret;
 		}
+		else if(this->label == "OR") {
+			ret += "\tmfc1 $t0, $f0\n\tmfc1 $t1, $f1\n\tor $t0, $t0, $t1\n\tmtc1 $t0, $f0\n";
+			ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";	
+			return ret;		
+		}
+		else if(this->label == "AND") {
+			ret += "\tmfc1 $t0, $f0\n\tmfc1 $t1, $f1\n\tand $t0, $t0, $t1\n\tmtc1 $t0, $f0\n";
+			ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";	
+			return ret;
+		}
+		else if(this->label == "EQ") {
+			ret += "\tmfc1 $t0, $f0\n\tmfc1 $t1, $f1\n\tseq $t0, $t0, $t1\n\tmtc1 $t0, $f0\n";
+			ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";	
+			return ret;
+		}
+		else if(this->label == "NE") {
+			ret += "\tmfc1 $t0, $f0\n\tmfc1 $t1, $f1\n\tsne $t0, $t0, $t1\n\tmtc1 $t0, $f0\n";
+			ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";	
+			return ret;
+		}
 		else if(this->label == "PLUS-FLOAT") {
 			ret += "\tadd.s $f0, $f0, $f1\n";
 		}
@@ -997,7 +1017,7 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 			ret += "\tdiv.s $f0, $f0, $f1\n";
 		}
 		if(myPop(this)){
-			ret += "\tmov.s " + this->reg + ", $f0\n";
+			ret += "# " + this->type.type + child1->type.type + child2->type.type + " \n\tmov.s " + this->reg + ", $f0\n";
 		}
 		else {
 			ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";			
