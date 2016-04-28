@@ -1,3 +1,4 @@
+// TODO order of evaluation for a + a++ + a
 // helper functions
 string newlabel(){
 	return "L"+to_string(labelcount++);
@@ -15,7 +16,7 @@ bool myPush(abstract_astnode* child){
 
 bool myPop(abstract_astnode* child, bool forPtr = false){
 	child->regValid = false;
-	if(child->type.getWidth()!=4) 
+	if(child->type.getWidth()!=4)
 		return false;
 	if((child->type.type=="int" || forPtr) && !tstack.empty()){
 		child->reg = tstack.top();
@@ -384,11 +385,13 @@ void Block::print(){
 
 string Block::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
+	currentDepth++;
 	ret += label + ":\n";
 	ret += "\taddi $sp, $sp, -8\n\tsw $ra, 4($sp)\n\tsw $fp, 0($sp)\n\tmove $fp, $sp\n\n";	// store dynamic link
 	ret += genSpaceForLocalVar(lstt);
 	ret += child1->generate_code(lstt, location);
 	ret += "\n" + label + "Return:\n\tlw $ra, 4($fp)\n\tmove $sp, $fp\n\tlw $fp, 0($fp)\n\taddi $sp, $sp, 8\n\tjr $ra\n\n";
+	currentDepth--;
 	return ret;
 }
 
@@ -460,13 +463,13 @@ string Return::generate_code(const LocalSymbolTable& lstt, bool location) {
 	int f_width = gst.getLst(value).meta->width, rv_width = gst.getLst(value).meta->symbol_type.getWidth();
 	if(myPush(child1)){
 		if(child1->type.type=="int"){
-			ret += "\tsw " + child1->reg + ", " + to_string(f_width + 8) + "($fp)\n"; 
+			ret += "\tsw " + child1->reg + ", " + to_string(f_width + 8) + "($fp)\n";
 		}
 		else{
-			ret += "\ts.s " + child1->reg + ", " + to_string(f_width + 8) + "($fp)\n"; 
+			ret += "\ts.s " + child1->reg + ", " + to_string(f_width + 8) + "($fp)\n";
 		}
 	} else {
-		ret += copy(rv_width, "($sp)", "($fp)", 0, f_width + 8);	
+		ret += copy(rv_width, "($sp)", "($fp)", 0, f_width + 8);
 	}
 	ret += "\tj " + value + "Return\n\n";
 	return ret;
@@ -640,50 +643,110 @@ void OpUnary::print(){
 
 string OpUnary::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "#OpUnary\n";
+
 	if (label == "PP") {
 		ret += child1->generate_code(lstt, 1);
 
 		if(myPush(child1)){
-			if(child1->type.type=="int"){
-				ret += "\tmove $t0, " + child1->reg + "\n";
-			}
-			else{
-				ret += "\tmfc1 $t0, " + child1->reg + "\n";
-			}
+			ret += "\tmove $t0, " + child1->reg + "\n";
 		}
 		else{
 			ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
 		}
-		ret += "\tlw $t1, 0($t0)\n\taddi $t1, $t1, 1\n\tsw $t1, 0($t0)\n";
-		
-		if(myPop(this)){
-			ret += "\tmove " + this->reg + ", $t1\n";
+
+		if (child1->type.type == "int"){
+			ret += "\tlw $t1, 0($t0)\n\taddi $t1, $t1, 1\n\tsw $t1, 0($t0)\n";
+
+			if(myPop(this)){
+				ret += "\tmove " + this->reg + ", $t1\n";
+			} else {
+				ret += "\taddi $sp, $sp, -4\n\tsw $t1, 0($sp)\n";
+			}
+			return ret;
 		} else {
-			ret += "\taddi $sp, $sp, -4\n\tsw $t1, 0($sp)\n";
+			ret += "\tl.s $f0, 0($t0)\n\tli.s $f1, 1\n\tadd.s $f0, $f0, $f1\n\tsw $f0, 0($t0)\n";
+
+			if(myPop(this)){
+				ret += "\tmov.s " + this->reg + ", $f0\n";
+			} else {
+				ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n";
+			}
+			return ret;
 		}
-		return ret;
-	}
-	// TODO Float pending for these operations
-	ret += child1->generate_code(lstt, 0);
-	if(myPush(child1)){
-		ret += "\tmove $t0, " + child1->reg + "\n";
-	}
-	else{
-		ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
 	}
 
-	if (label == "UMINUS") {
-		ret += "\tneg $t0, $t0\n";
+	ret += child1->generate_code(lstt, 0);
+
+	if (label == "NOT") {
+		if (child1->type.type == "int") {
+			if(myPush(child1)){
+				ret += "\tmove $t0, " + child1->reg + "\n";
+			}
+			else{
+				ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
+			}
+
+			ret += "\tnot $t0, $t0\n";
+			if(myPop(this)){
+				ret += "\tmove " + this->reg + ", $t0\n";
+			} else {
+				ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+			}
+			return ret;
+		} else {
+			if(myPush(child1)){
+				ret += "\tmfc1 $t0, " + child1->reg + "\n";
+			}
+			else{
+				ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
+			}
+
+			ret += "\tnot $t0, $t0\n";
+			if(myPop(this)){
+				ret += "\tmove " + this->reg + ", $t0\n";
+			} else {
+				ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+			}
+			return ret;
+
+		}
 	}
-	else if (label == "NOT") {
-		ret += "\tnot $t0, $t0\n";
+	else if (label == "UMINUS") {
+		if (child1->type.type == "int") {
+			if(myPush(child1)){
+				ret += "\tmove $t0, " + child1->reg + "\n";
+			}
+			else{
+				ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
+			}
+
+			ret += "\tneg $t0, $t0\n";
+
+			if(myPop(this)){
+				ret += "\tmove " + this->reg + ", $t0\n";
+			} else {
+				ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+			}
+			return ret;
+
+		} else if (child1->type.type == "float") {
+				if(myPush(child1)){
+					ret += "\tmov.s $f0, " + child1->reg + "\n";
+				}
+				else{
+					ret += "\tl.s $f0, 0($sp)\n\taddi $sp, $sp, 4\n";
+				}
+
+				ret += "\tneg.s $f0, $f0\n";
+
+				if(myPop(this)){
+				ret += "\tmov.s " + this->reg + ", $f0\n";
+			} else {
+				ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";
+			}
+			return ret;
+		}
 	}
-	if(myPop(this)){
-		ret += "\tmove " + this->reg + ", $t0\n";
-	} else {
-		ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
-	}
-	return ret;
 }
 
 void OpUnary::assignReg() {
@@ -763,9 +826,9 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 		}
 	  	if(myPop(this)){
 			ret += "\tmove " + this->reg + ", $t0\n";
-	  	} else {
-			ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
-	  	}
+  		} else {
+				ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+  		}
 	}
 	else {
 		// pop the two children from stack and perform the binary operation
@@ -794,14 +857,14 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 			} else if(child1->type.type == "float"){
 				ret += "\tmov.s $f0, " + child1->reg + "\n";
 			}
-		} 
+		}
 		else {
 			ret += "\tl.s $f0, 0($sp)\n\taddi $sp, $sp, 4\n";
 			if (child1->type.type == "int"){
 				ret += "\tcvt.s.w $f0, $f0\n";
 			}
 		}
-			
+
 		if(this->label == "LT-FLOAT") {
 			ret += "\tc.lt.s $f0, $f1\n\tbc1t " + label + "\n";
 			if(myPop(this)){
@@ -891,7 +954,7 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 			ret += "\tmov.s " + this->reg + ", $f0\n";
 		}
 		else {
-			ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";			
+			ret += "\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";
 		}
 	}
 	return ret;
@@ -923,14 +986,12 @@ string Assign::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "#Assign\n";
 	ret += child2->generate_code(lstt, 0);
 	ret += child1->generate_code(lstt, 1);
-	
 	if(myPush(child1)){
 		ret += "\tmove $t0, " + child1->reg + "\n";
 	}
 	else{
 		ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
 	}
-	
 	// handle separately the case that typecasting needs to be done
 	if (child1->type.type == "int" && child1->type.pureType()) {
 		if (child2->type.type == "float" && child2->type.pureType()) {
@@ -961,7 +1022,7 @@ string Assign::generate_code(const LocalSymbolTable& lstt, bool location) {
 			else {
 				ret += "\tl.s $f0, 0($sp)\n\taddi $sp, $sp, 4\n";
 			}
-			ret += "\n\tcvt.s.w $f0, $f0\n\ts.s $f0, 0($t0)\n";	
+			ret += "\n\tcvt.s.w $f0, $f0\n\ts.s $f0, 0($t0)\n";
 			return ret;
 		} else if (child2->type.type == "float" && child2->type.pureType()) {
 			if(myPush(child2)){
@@ -970,13 +1031,13 @@ string Assign::generate_code(const LocalSymbolTable& lstt, bool location) {
 			else {
 				ret += "\tl.s $f0, 0($sp)\n\taddi $sp, $sp, 4\n";
 			}
-			ret += "\ts.s $f0, 0($t0)\n";	
+			ret += "\ts.s $f0, 0($t0)\n";
 			return ret;
 		}
 	}
 	// copy width bytes from current $sp to $t0
 	int obj_width = child2->type.getWidth();
-	ret += copy(obj_width,"($sp)", "($t0)", 0, 4-obj_width);	
+	ret += copy(obj_width,"($sp)", "($t0)", 0, 4-obj_width);
 	return ret;
 }
 
@@ -1007,60 +1068,60 @@ string Funcall::generate_code(const LocalSymbolTable& lstt, bool location) {
         // do a syscall for each stringconst, float, int in the children
         for (int i=0; i<children.size(); i++) {
             if (children[i]->label == "StringConst") {
-				ret += "# printf prints a string const\n";
-				ret += "\tla $a0, " + children[i]->string_label + "\n\taddi $v0, $0, 4\n\tsyscall\n";
+							ret += "# printf prints a string const\n";
+							ret += "\tla $a0, " + children[i]->string_label + "\n\taddi $v0, $0, 4\n\tsyscall\n";
             } else if (children[i]->label == "IntConst") {
-				ret += "# printf prints an int const\n";
-                ret += "\taddi $a0, $0, " + children[i]->value + "\n\taddi $v0, $0, 1\n\tsyscall\n";
+							ret += "# printf prints an int const\n";
+              ret += "\taddi $a0, $0, " + children[i]->value + "\n\taddi $v0, $0, 1\n\tsyscall\n";
             } else if (children[i]->label == "FloatConst") {
-				ret += "# printf prints a float const\n";
-	         	ret += "\tli.s $f12, " + children[i]->value + "\n\taddi $v0, $0, 2\n\tsyscall\n";
+							ret += "# printf prints a float const\n";
+	         		ret += "\tli.s $f12, " + children[i]->value + "\n\taddi $v0, $0, 2\n\tsyscall\n";
             } else if (children[i]->label == "Id") {
-                if (children[i]->type.type == "int") {
-                    ret += "# printf prints an int identifier\n";
-                    ret += children[i]->generate_code(lstt, 0);
-                    if(myPush(children[i])){
-                    	ret += "\tmove $a0, " +children[i]->reg + "\n";
-                    }
-                    else{
-	                    ret += "\tlw $a0, 0($sp)\n\taddi $sp, $sp, 4\n";                    	
-                    }
-                    ret += "\taddi $v0, $0, 1\n\tsyscall\n";
-                } else if (children[i]->type.type == "float") {
-                    ret += "# printf prints a float identifier\n";
-                    ret += children[i]->generate_code(lstt, 0);
-                    if(myPush(children[i])){
-                    	ret += "\tmov.s $f12, " + children[i]->reg + "\n";
-                    }
-                    else{
-	                    ret += "\tl.s $f12, 0($sp)\n\taddi $sp, $sp, 4\n";
-                    }
-                    ret += "\taddi $v0, $0, 2\n\tsyscall\n";
-                }
-            } else {
-                ret += "# printf prints an expression\n";
+              if (children[i]->type.type == "int") {
+                ret += "# printf prints an int identifier\n";
                 ret += children[i]->generate_code(lstt, 0);
-				if (children[i]->type.type == "int") {
-					if(myPush(children[i])){
-                    	ret += "\tmove $a0, " +children[i]->reg + "\n";
-                    }
-                    else{
-	                    ret += "\tlw $a0, 0($sp)\n\taddi $sp, $sp, 4\n";                    	
-                    }
-                	ret += "\taddi $v0, $0, 1\n\tsyscall\n";
-				} else if (children[i]->type.type == "float") {
-					if(myPush(children[i])){
-                		ret += "\tmov.s $f12, " + children[i]->reg + "\n";
-                    }
-                    else{
-						ret += "\tl.s $f12, 0($sp)\n\taddi $sp, $sp, 4\n";
-                    }
-					ret += "\taddi $v0, $0, 2\n\tsyscall\n";
-				}
+                if(myPush(children[i])){
+                	ret += "\tmove $a0, " +children[i]->reg + "\n";
+                }
+                else{
+                  ret += "\tlw $a0, 0($sp)\n\taddi $sp, $sp, 4\n";
+                }
+                ret += "\taddi $v0, $0, 1\n\tsyscall\n";
+              } else if (children[i]->type.type == "float") {
+                ret += "# printf prints a float identifier\n";
+                ret += children[i]->generate_code(lstt, 0);
+                if(myPush(children[i])){
+                	ret += "\tmov.s $f12, " + children[i]->reg + "\n";
+                }
+                else{
+                  ret += "\tl.s $f12, 0($sp)\n\taddi $sp, $sp, 4\n";
+                }
+                ret += "\taddi $v0, $0, 2\n\tsyscall\n";
+              }
+            } else {
+              ret += "# printf prints an expression\n";
+              ret += children[i]->generate_code(lstt, 0);
+							if (children[i]->type.type == "int") {
+								if(myPush(children[i])){
+                	ret += "\tmove $a0, " +children[i]->reg + "\n";
+                }
+                else{
+                  ret += "\tlw $a0, 0($sp)\n\taddi $sp, $sp, 4\n";
+                }
+              	ret += "\taddi $v0, $0, 1\n\tsyscall\n";
+							} else if (children[i]->type.type == "float") {
+								if(myPush(children[i])){
+              		ret += "\tmov.s $f12, " + children[i]->reg + "\n";
+                }
+                else{
+									ret += "\tl.s $f12, 0($sp)\n\taddi $sp, $sp, 4\n";
+                }
+								ret += "\taddi $v0, $0, 2\n\tsyscall\n";
+							}
             }
         }
         return ret;
-    }
+    	}
 
 	// get the width of the function return value from the gst using child1 as identifier
 	int rv_width = gst.getLst(child1->value).meta->symbol_type.getWidth();
@@ -1071,41 +1132,41 @@ string Funcall::generate_code(const LocalSymbolTable& lstt, bool location) {
 
 	// gen code for all the children
 	for(int i=0; i<children.size(); i++){
-        if(children[i]->type.vec.size()>0){
-        	if(lstt.getEntry(children[i]->value).symbol_scope!="param"){
-	        	ret += children[i]->generate_code(lstt, 1);
-	        	if(myPush(children[i])){
-	        		if(children[i]->type.type=="int"){
-		        		ret += "\taddi $sp, $sp, -4\n\tsw " + children[i]->reg + ", 0($sp)\n";
-	        		}
-		        	else{
-		        		ret += "\taddi $sp, $sp, -4\n\ts.s " + children[i]->reg + ", 0($sp)\n";		
-		        	}
-	        	}
-        	}
-	        else {
-		        ret += children[i]->generate_code(lstt, 0);
-		        if(myPush(children[i])){
-	        		if(children[i]->type.type=="int"){
-		        		ret += "\taddi $sp, $sp, -4\n\tsw " + children[i]->reg + ", 0($sp)\n";
-	        		}
-		        	else{
-		        		ret += "\taddi $sp, $sp, -4\n\ts.s " + children[i]->reg + ", 0($sp)\n";		
-		        	}
-	        	}
-	        }
-        }
-	    else{
-	        ret += children[i]->generate_code(lstt, 0);
-	        if(myPush(children[i])){
-        		if(children[i]->type.type=="int"){
-	        		ret += "\taddi $sp, $sp, -4\n\tsw " + children[i]->reg + ", 0($sp)\n";
-        		}
-	        	else{
-	        		ret += "\taddi $sp, $sp, -4\n\ts.s " + children[i]->reg + ", 0($sp)\n";		
-	        	}
-	        }
+	  if(children[i]->type.vec.size()>0){
+	  	if(lstt.getEntry(children[i]->value).symbol_scope!="param"){
+	    	ret += children[i]->generate_code(lstt, 1);
+	    	if(myPush(children[i])){
+	    		if(children[i]->type.type=="int"){
+	      		ret += "\taddi $sp, $sp, -4\n\tsw " + children[i]->reg + ", 0($sp)\n";
+	    		}
+	      	else{
+	      		ret += "\taddi $sp, $sp, -4\n\ts.s " + children[i]->reg + ", 0($sp)\n";
+	      	}
+	    	}
+	  	}
+	    else {
+	      ret += children[i]->generate_code(lstt, 0);
+	      if(myPush(children[i])){
+	    		if(children[i]->type.type=="int"){
+	      		ret += "\taddi $sp, $sp, -4\n\tsw " + children[i]->reg + ", 0($sp)\n";
+	    		}
+	      	else {
+	      		ret += "\taddi $sp, $sp, -4\n\ts.s " + children[i]->reg + ", 0($sp)\n";
+	      	}
+	    	}
 	    }
+    }
+	  else{
+      ret += children[i]->generate_code(lstt, 0);
+      if(myPush(children[i])){
+    		if(children[i]->type.type=="int"){
+      		ret += "\taddi $sp, $sp, -4\n\tsw " + children[i]->reg + ", 0($sp)\n";
+    		}
+      	else{
+      		ret += "\taddi $sp, $sp, -4\n\ts.s " + children[i]->reg + ", 0($sp)\n";
+      	}
+      }
+	  }
 	}
 	// call the function
 	ret += "\tjal " + child1->value + "\n";
@@ -1136,7 +1197,7 @@ string FloatConst::generate_code(const LocalSymbolTable& lstt, bool location) {
 	if(myPop(this)){
 		ret += "\tli.s " + this->reg + ", " + value + "\n";
 	} else {
-		ret += "\tli.s $f0, " + value + "\n\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";		
+		ret += "\tli.s $f0, " + value + "\n\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";
 	}
 	return ret;
 }
@@ -1250,7 +1311,7 @@ string Member::generate_code(const LocalSymbolTable& lstt, bool location) {
 			else{
 				ret += "#AAA" + this->type.type + "\n\tl.s " + this->reg + ", 0($t0)\n";
 			}
-		} 
+		}
 		else{
 			int obj_width = type.getWidth();
 			ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
@@ -1311,7 +1372,7 @@ string Arrow::generate_code(const LocalSymbolTable& lstt, bool location) {
 			else{
 				ret += "\tl.s " + this->reg + ", 0($t0)\n";
 			}
-		} 
+		}
 		else{
 			int obj_width = type.getWidth();
 			ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
@@ -1345,7 +1406,7 @@ string Deref::generate_code(const LocalSymbolTable& lstt, bool location) {
 		if(myPush(child1)){
 			if(myPop(this, true)){
 				ret += "\tmove " + this->reg + ", " + child1->reg + "\n";
-			} 
+			}
 			else {
 				ret += "\taddi $sp, $sp, -4\n\tsw " + child1->reg + ", 0($sp)\n";
 			}
@@ -1363,7 +1424,7 @@ string Deref::generate_code(const LocalSymbolTable& lstt, bool location) {
 	}
 	// TODO handle floats here
 	else{
-		ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";		
+		ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
 	}
 	if(myPop(this)){
 		if(this->type.type=="int"){
@@ -1376,7 +1437,7 @@ string Deref::generate_code(const LocalSymbolTable& lstt, bool location) {
 	else{
 		int obj_width = type.getWidth();
 		ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
-		ret += copy(obj_width, "($t0)", "($sp)", 4-obj_width, 0);		
+		ret += copy(obj_width, "($t0)", "($sp)", 4-obj_width, 0);
 	}
 	return ret;
 }
@@ -1394,11 +1455,56 @@ void Identifier::print(){
 	cerr << label << " \"" << value << "\"";
 }
 
+// add a boolean parameter PushToStack; if it is true; you NEED to push it to the stack
+
+// if location not needed
+// if register is set for this offset, set reg = that;
+// else try and allot it, if successful, store from the stack to that register
+// if unable to allot a register, push to stack and set reg = ""
 string Identifier::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "#Identifier\n";
 	int varoffset = lstt.getEntry(value).offset;
 	if (!location) {
 		int obj_width = type.getWidth();
+
+		if (obj_width == 4){
+			if (type.type == "float"){
+				reg = cache.isCached(varoffset, 0);
+
+				if (reg == "") {
+					reg = cache.AllotRegister(varoffset, 0);
+					if (reg != "") {
+						// load value from stack to the register
+						ret += "\tl.s " + reg + ", " + to_string(varoffset) + "($fp)\n";
+						regValid = true;
+						return ret;
+					} else {
+						regValid = false;
+					}
+				} else {
+					regValid = true;
+					return "";
+				}
+			} else {
+				reg = cache.isCached(varoffset, 1);
+
+				if (reg == "") {
+					reg = cache.AllotRegister(varoffset, 1);
+
+					if (reg != "") {
+						regValid = true;
+
+						// load value from stack to the register
+						return "\tlw " + reg + ", " + to_string(varoffset) + "($fp)\n";
+					} else {
+						regValid = false;
+					}
+				} else {
+					regValid = true;
+					return "";
+				}
+			}
+		}
 		ret += "\taddi $sp, $sp, -" + to_string(obj_width) + "\n";
 		ret += copy(obj_width, "($fp)", "($sp)", (4-obj_width+varoffset), 0);
 	}
@@ -1502,12 +1608,56 @@ void ArrayRef::assignReg() {
 
 }
 
+CacheBlock::CacheBlock(string reg) {
+	identifier = "";
+	this->reg = reg;
+	valid = 0;
+	depth = -1;
+	offset = 0;
+}
+
+Cache::Cache() {
+	string s = "$s", f = "$f";
+	for (int i=0; i<8; i++)
+		intcache.push_back(CacheBlock(s+to_string(i)));
+
+	for (int i=13; i<32; i++)
+		floatcache.push_back(CacheBlock(f+to_string(i)));
+}
 
 // off is the offset for which we are checking
-string Cache::findregister(int off) {
-	for(int i=0; i<cache.size(); i++) {
-		if (cache[i].valid && cache[i].depth == currentDepth && cache[i].offset == off) {
-			return cache[i].reg;
+string Cache::isCached(int off, bool integer) {
+	if (integer) {
+		for(int i=0; i<intcache.size(); i++) {
+			if (intcache[i].valid && intcache[i].depth == currentDepth && intcache[i].offset == off)
+					return intcache[i].reg;
+		}
+		return "";
+
+	}
+	else {
+		for(int i=0; i<floatcache.size(); i++) {
+			if (floatcache[i].valid && floatcache[i].depth == currentDepth && floatcache[i].offset == off)
+					return floatcache[i].reg;
+		}
+		return "";
+	}
+}
+
+string Cache::AllotRegister(int off, bool integer) {
+	if (integer) {
+		for(int i=0; i<intcache.size(); i++) {
+			if (!intcache[i].valid){
+				return intcache[i].reg;
+			}
 		}
 	}
+	else {
+		for(int i=0; i<floatcache.size(); i++) {
+			if (!floatcache[i].valid){
+				return floatcache[i].reg;
+			}
+		}
+	}
+	return "";
 }
