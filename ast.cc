@@ -629,7 +629,13 @@ string OpUnary::generate_code(const LocalSymbolTable& lstt, bool location) {
 		else{
 			ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
 		}
-		ret += "\tlw $t1, 0($t0)\n\taddi $t1, $t1, 1\naddi $sp, $sp, -4\tsw $t1, 0($t0)\n";
+		ret += "\tlw $t1, 0($t0)\n\taddi $t1, $t1, 1\n\tsw $t1, 0($t0)\n";
+		
+		if(myPop(this)){
+			ret += "\tmove " + this->reg + ", $t1\n";
+		} else {
+			ret += "\taddi $sp, $sp, -4\n\tsw $t1, 0($sp)\n";
+		}
 		return ret;
 	}
 	// TODO Float pending for these operations
@@ -647,7 +653,11 @@ string OpUnary::generate_code(const LocalSymbolTable& lstt, bool location) {
 	else if (label == "NOT") {
 		ret += "\tnot $t0, $t0\n";
 	}
-	ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+	if(myPop(this)){
+		ret += "\tmove " + this->reg + ", $t0\n";
+	} else {
+		ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+	}
 	return ret;
 }
 
@@ -957,17 +967,13 @@ string Funcall::generate_code(const LocalSymbolTable& lstt, bool location) {
 
 	// get the width of the function return value from the gst using child1 as identifier
 	int rv_width = gst.getLst(child1->value).meta->symbol_type.getWidth();
-
     // get space on the stack for rv
 	ret += "\taddi $sp, $sp, " + to_string((-1)*rv_width) + "\n";
-
 	// get the total width of the function parameters
 	int f_width = gst.getLst(child1->value).meta->width;
 
 	// gen code for all the children
 	for(int i=0; i<children.size(); i++){
-
-       // TODO check if the parameter is passed by reference in the function definition in the GST
         if(children[i]->type.vec.size()>0){
         	if(lstt.getEntry(children[i]->value).symbol_scope!="param"){
 	        	ret += children[i]->generate_code(lstt, 1);
@@ -980,16 +986,12 @@ string Funcall::generate_code(const LocalSymbolTable& lstt, bool location) {
 	        ret += children[i]->generate_code(lstt, 0);
 	    }
 	}
-
 	// call the function
 	ret += "\tjal " + child1->value + "\n";
-
 	// pop the parameters from the stack
 	ret += "\taddi $sp, $sp, " + to_string(f_width) + "\n\n";
-
 	return ret;
 }
-
 
 void Funcall::assignReg() {
 	for(int i=0; i < children.size(); i++){
@@ -1010,7 +1012,11 @@ void FloatConst::print(){
 string FloatConst::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
 	if (location) ret += "#trying to get location of read only data\n";
-	ret += "\tli.s $f0, " + value + "\n\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";
+	if(myPop(this)){
+		ret += "\tli.s " + this->reg + ", " + value + "\n";
+	} else {
+		ret += "\tli.s $f0, " + value + "\n\taddi $sp, $sp, -4\n\ts.s $f0, 0($sp)\n\n";		
+	}
 	return ret;
 }
 
@@ -1030,7 +1036,12 @@ void IntConst::print(){
 string IntConst::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
 	if (location) ret += "#trying to get location of read only data\n";
-	ret += "\taddi $t0, $0, " + value + "\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+	if(myPop(this)){
+		ret += "\taddi " + this->reg + ", $0, " + value + "\n";
+	}
+	else {
+		ret += "\taddi $t0, $0, " + value + "\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+	}
 	return ret;
 }
 
@@ -1098,15 +1109,32 @@ string Member::generate_code(const LocalSymbolTable& lstt, bool location) {
 	// no need to generate code for child2 (it is an identifier), need it for calculating the offset
 	// look child1->type.type up in the lst; child2 ka offset nikalo is struct k liye
 	int offset = gst.getLst(child1->type.type).getEntry(child2->value).offset;
-	ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n\taddi $t0, $t0," + to_string(offset) + "\n";
+	if(myPush(child1)){
+		ret += "\tmove $t0, " + child1->reg  + "\n";
+	}
+	else {
+		ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
+	}
+
+	ret += "\taddi $t0, $t0," + to_string(offset) + "\n";
 
 	if (location) {
 		// push to stack sum of the return values of stack
-		ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+		if(myPop(this)){
+			ret += "\tmove " + this->reg + ", $t0\n";
+		}
+		else{
+			ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+		}
 	} else {
-		int obj_width = type.getWidth();
-		ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
-		ret += copy(obj_width, "($t0)", "($sp)", 4-obj_width, 0);
+		if(myPop(this)){
+			ret += "\tlw " + this->reg + ", 0($t0)\n";
+		} 
+		else{
+			int obj_width = type.getWidth();
+			ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
+			ret += copy(obj_width, "($t0)", "($sp)", 4-obj_width, 0);
+		}
 	}
 	return ret;
 }
@@ -1137,15 +1165,31 @@ string Arrow::generate_code(const LocalSymbolTable& lstt, bool location) {
 	// look up child1->type.type in the lst; child2 ka offset nikalo is struct k liye
 	int offset = gst.getLst(child1->type.type).getEntry(child2->value).offset;
 
-	ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n\taddi $t0, $t0," + to_string(offset) + "\n";
+	if(myPush(child1)){
+		ret += "\tmove $t0, " + child1->reg + "\n";
+	}
+	else{
+		ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
+	}
+	ret += "\taddi $t0, $t0," + to_string(offset) + "\n";
 	if (location) {
 		// push to stack sum of the return values of stack
-		ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+		if(myPop(this)){
+			ret += "\tmove " + this->reg + ", $t0\n";
+		}
+		else{
+			ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+		}
 	}
 	else {
-		int obj_width = type.getWidth();
-		ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
-		ret += copy(obj_width, "($t0)", "($sp)", 4-obj_width, 0);
+		if(myPop(this)){
+			ret += "\tlw " + this->reg + ", 0($t0)\n";
+		} 
+		else{
+			int obj_width = type.getWidth();
+			ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
+			ret += copy(obj_width, "($t0)", "($sp)", 4-obj_width, 0);
+		}
 	}
 	return ret;
 }
@@ -1170,12 +1214,32 @@ string Deref::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
 	ret += child1->generate_code(lstt, 0);
 	// child1 will always be a pointer
-	if (location) return ret;
+	if (location){
+		if(myPush(child1)){
+			if(myPop(this)){
+				ret += "\tmove " + this->reg + ", " + child1->reg + "\n";
+			} 
+			else {
+				ret += "\taddi $sp, $sp, -4\n\tsw " + child1->reg + ", 0($sp)\n";
+			}
+		}
+		return ret;
+	}
 
-	ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
-	int obj_width = type.getWidth();
-	ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
-	ret += copy(obj_width, "($t0)", "($sp)", 4-obj_width, 0);
+	if(myPush(child1)){
+		ret += "\tmove $t0, " + child1->reg + "\n";
+	}
+	else{
+		ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";		
+	}
+	if(myPop(this)){
+		ret += "\tlw " + this->reg + ", 0($t0)\n";
+	}
+	else{
+		int obj_width = type.getWidth();
+		ret += "\taddi $sp, $sp, " + to_string(-1*obj_width) + "\n";
+		ret += copy(obj_width, "($t0)", "($sp)", 4-obj_width, 0);		
+	}
 	return ret;
 }
 
