@@ -7,8 +7,8 @@ bool myPush(abstract_astnode* child){
 	if(child->type.getWidth()!=4) return false;
 	if(!child->regValid) return false;
 	if(child->label == "Id") return true;
-	if(child->type.type=="int") tstack.push(child->reg);
-	else if(child->type.type=="float") ftstack.push(child->reg);
+	if(child->reg.find("t")!=string::npos) tstack.push(child->reg);
+	else if(child->reg.find("f")!=string::npos) ftstack.push(child->reg);
 	else return false;
 	return true;
 }
@@ -17,13 +17,13 @@ bool myPop(abstract_astnode* child, bool forPtr = false){
 	child->regValid = false;
 	if(child->type.getWidth()!=4) 
 		return false;
-	if((child->type.type=="int" || forPtr) && tstack.size()>0){
+	if((child->type.type=="int" || forPtr) && !tstack.empty()){
 		child->reg = tstack.top();
 		child->regValid = true;
 		tstack.pop();
 		return true;
 	}
-	else if(child->type.type=="float" && ftstack.size()>0 && !forPtr){
+	else if(child->type.type=="float" && !ftstack.empty() && !forPtr){
 		child->reg = ftstack.top();
 		child->regValid = true;
 		ftstack.pop();
@@ -504,7 +504,7 @@ string If::generate_code(const LocalSymbolTable& lstt, bool location) {
 			ret += "\tmove $t0, " + child1->reg + "\n";
 		}
 		else{
-			ret += "\tmfc1 $t0, " + child1->reg + "\n\tcvt.w.s $t0, $t0\n";
+			ret += "\tmfc1 $t0, " + child1->reg + "\n";
 		}
 	}
 	else{
@@ -554,7 +554,7 @@ string While::generate_code(const LocalSymbolTable& lstt, bool location) {
 			ret += "\tmove $t0, " + child1->reg + "\n";
 		}
 		else{
-			ret += "\tmfc1 $t0, " + child1->reg + "\n\tcvt.w.s $t0, $t0\n";
+			ret += "\tmfc1 $t0, " + child1->reg + "\n";
 		}
 	}
 	else{
@@ -605,7 +605,7 @@ string For::generate_code(const LocalSymbolTable& lstt, bool location) {
 			ret += "\tmove $t0, " + child2->reg + "\n";
 		}
 		else{
-			ret += "\tmfc1 $t0, " + child2->reg + "\n\tcvt.w.s $t0, $t0\n";
+			ret += "\tmfc1 $t0, " + child2->reg + "\n";
 		}
 	}
 	else{
@@ -711,7 +711,7 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 	ret += child2->generate_code(lstt, 0);
 
 	// type.type=int -> child1 and child2 have to be int
-	if (type.type == "int") {
+	if (child1->type.type == "int" && child2->type.type == "int") {
 		if(myPush(child2)){
 			ret += "\tmove $t1, " + child2->reg + "\n";
 		} else {
@@ -758,9 +758,9 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 		else if(this->label == "MULT-INT") {
 			ret += "\tmul $t0, $t0, $t1\n";
 		}
-	  else if(this->label == "DIV-INT") {
-	      ret += "\tdiv $t0, $t0, $t1\n";
-	  }
+		else if(this->label == "DIV-INT") {
+	  		ret += "\tdiv $t0, $t0, $t1\n";
+		}
 	  	if(myPop(this)){
 			ret += "\tmove " + this->reg + ", $t0\n";
 	  	} else {
@@ -803,28 +803,76 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 		}
 			
 		if(this->label == "LT-FLOAT") {
-			ret += "\tc.lt.s $f0, $f1\nbczt " + label + "\n";
-			ret += "\taddi$sp, $sp, -4\n\tsw $0, 0($sp)\n";
-			ret += label + ":\n\taddi $t0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp\n)";
-			ret += label2 + ":\n";
+			ret += "\tc.lt.s $f0, $f1\n\tbc1t " + label + "\n";
+			if(myPop(this)){
+				ret += "\tmove " + this->reg + ", $0\n";
+				ret += "\tj " + label2 + "\n";
+				ret += label + ":\n";
+				ret += "\taddi " + this->reg + ", $0, 1\n";
+				ret += label2 + ":\n";
+			}
+			else{
+				ret += "\taddi $sp, $sp, -4\n\tsw $0, 0($sp)\n";
+				ret += "\tj " + label2 + "\n";
+				ret += label + ":\n";
+				ret += "\taddi $t0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n";
+				ret += label2 + ":\n";
+			}
+			return ret;
 		}
 		else if(this->label == "LE_OP-FLOAT") {
-			ret += "\tc.le.s $f0, $f1\nbczt " + label + "\n";
-			ret += "\taddi$sp, $sp, -4\n\tsw $0, 0($sp)\n";
-			ret += label + ":\n\taddi $t0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp\n)";
-			ret += label2 + ":\n";
+			ret += "\tc.le.s $f0, $f1\n\tbc1t " + label + "\n";
+			if(myPop(this)){
+				ret += "\tmove " + this->reg + ", $0\n";
+				ret += "\tj " + label2 + "\n";
+				ret += label + ":\n";
+				ret += "\taddi " + this->reg + ", $0, 1\n";
+				ret += label2 + ":\n";
+			}
+			else{
+				ret += "\taddi $sp, $sp, -4\n\tsw $0, 0($sp)\n";
+				ret += "\tj " + label2 + "\n";
+				ret += label + ":\n";
+				ret += "\taddi $t0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n";
+				ret += label2 + ":\n";
+			}
+			return ret;
 		}
 		else if(this->label == "GE_OP-FLOAT") {
-			ret += "\tc.le.s $f1, $f0\nbczt " + label + "\n";
-			ret += "\taddi$sp, $sp, -4\n\tsw $0, 0($sp)\n";
-			ret += label + ":\n\taddi $t0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp\n)";
-			ret += label2 + ":\n";
+			ret += "\tc.le.s $f1, $f0\n\tbc1t " + label + "\n";
+			if(myPop(this)){
+				ret += "\tmove " + this->reg + ", $0\n";
+				ret += "\tj " + label2 + "\n";
+				ret += label + ":\n";
+				ret += "\taddi " + this->reg + ", $0, 1\n";
+				ret += label2 + ":\n";
+			}
+			else{
+				ret += "\taddi $sp, $sp, -4\n\tsw $0, 0($sp)\n";
+				ret += "\tj " + label2 + "\n";
+				ret += label + ":\n";
+				ret += "\taddi $t0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n";
+				ret += label2 + ":\n";
+			}
+			return ret;
 		}
 		else if(this->label == "GT-FLOAT") {
-			ret += "\tc.lt.s $f1, $f0\nbczt " + label + "\n";
-			ret += "\taddi$sp, $sp, -4\n\tsw $0, 0($sp)\n";
-			ret += label + ":\n\taddi $t0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp\n)";
-			ret += label2 + ":\n";
+			ret += "\tc.lt.s $f1, $f0\n\tbc1t " + label + "\n";
+			if(myPop(this)){
+				ret += "\tmove " + this->reg + ", $0\n";
+				ret += "\tj " + label2 + "\n";
+				ret += label + ":\n";
+				ret += "\taddi " + this->reg + ", $0, 1\n";
+				ret += label2 + ":\n";
+			}
+			else{
+				ret += "\taddi $sp, $sp, -4\n\tsw $0, 0($sp)\n";
+				ret += "\tj " + label2 + "\n";
+				ret += label + ":\n";
+				ret += "\taddi $t0, $0, 1\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n";
+				ret += label2 + ":\n";
+			}
+			return ret;
 		}
 		else if(this->label == "PLUS-FLOAT") {
 			ret += "\tadd.s $f0, $f0, $f1\n";
@@ -838,6 +886,7 @@ string OpBinary::generate_code(const LocalSymbolTable& lstt, bool location) {
 		else if(this->label == "DIV-FLOAT") {
 			ret += "\tdiv.s $f0, $f0, $f1\n";
 		}
+		
 		if(myPop(this)){
 			ret += "\tmov.s " + this->reg + ", $f0\n";
 		}
@@ -892,7 +941,7 @@ string Assign::generate_code(const LocalSymbolTable& lstt, bool location) {
 			else {
 				ret += "\tl.s $f0, 0($sp)\n\taddi $sp, $sp, 4\n";
 			}
-			ret += "\n\tcvt.w.s $f0, $f0\n\ts.s $f0, 0($t0)\n";	
+			ret += "\n\tcvt.w.s $f0, $f0\n\ts.s $f0, 0($t0)\n";
 			return ret;
 		}
 		else if (child2->type.type == "int" && child2->type.pureType()) {
@@ -916,7 +965,7 @@ string Assign::generate_code(const LocalSymbolTable& lstt, bool location) {
 			return ret;
 		} else if (child2->type.type == "float" && child2->type.pureType()) {
 			if(myPush(child2)){
-				ret += "\tmov.s " + child2->reg + ", $f0\n";
+				ret += "\tmov.s $f0, " + child2->reg + "\n";
 			}
 			else {
 				ret += "\tl.s $f0, 0($sp)\n\taddi $sp, $sp, 4\n";
@@ -1199,7 +1248,7 @@ string Member::generate_code(const LocalSymbolTable& lstt, bool location) {
 				ret += "\tlw " + this->reg + ", 0($t0)\n";
 			}
 			else{
-				ret += "\tl.s" + this->reg + ", 0($t0)\n";
+				ret += "#AAA" + this->type.type + "\n\tl.s " + this->reg + ", 0($t0)\n";
 			}
 		} 
 		else{
@@ -1260,7 +1309,7 @@ string Arrow::generate_code(const LocalSymbolTable& lstt, bool location) {
 				ret += "\tlw " + this->reg + ", 0($t0)\n";
 			}
 			else{
-				ret += "\tl.s" + this->reg + ", 0($t0)\n";
+				ret += "\tl.s " + this->reg + ", 0($t0)\n";
 			}
 		} 
 		else{
@@ -1410,18 +1459,10 @@ string ArrayRef::generate_code(const LocalSymbolTable& lstt, bool location) {
 	ret += "\taddi $t0, $0, " + to_string(n) + "\n";
 	// computing the address of the array reference
 	if(myPush(child2)){
-		if(child2->type.type=="int"){
-			ret += "\tmove $t1, " + child2->reg + "\n";
-		}
-		else{
-			ret += "\tmfc1 $t1, " + child2->reg + "\n\tcvt.w.s $t1, $t1\n";
-		}
+		ret += "\tmove $t1, " + child2->reg + "\n";
 	}
 	else{
 		ret += "\tlw $t1, 0($sp)\n\taddi $sp, $sp, 4\n";
-		if(child2->type.type=="float"){
-			ret += "\tcvt.w.s $t1, $t1\n";
-		}
 	}
 	ret += "\tmul $t1, $t1, $t0\n";
 	if(myPush(child1)){

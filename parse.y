@@ -509,20 +509,17 @@ relational_expression
 			ExpAst* temp3 = $3;
 			if(temp1->type.type == "int" && temp3->type.type == "int"){
 				$$ = new OpBinary("LT-INT", temp1, temp3);
-				$$->type.type = "int";
 			}
 			else if(temp1->type.type == "float" && temp3->type.type == "float"){
 				$$ = new OpBinary("LT-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
 			else if(temp1->type.type == "int" && temp3->type.type == "float"){
 				$$ = new OpBinary("LT-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
 			else if (temp1->type.type == "float" && temp3->type.type == "int"){
 				$$ = new OpBinary("LT-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
+			$$->type.type = "int";
 		}
 	| relational_expression '>' additive_expression 
 		{
@@ -530,20 +527,17 @@ relational_expression
 			ExpAst* temp3 = $3;
 			if(temp1->type.type == "int" && temp3->type.type == "int"){
 				$$ = new OpBinary("GT-INT", temp1, temp3);
-				$$->type.type = "int";
 			}
 			else if(temp1->type.type == "float" && temp3->type.type == "float"){
 				$$ = new OpBinary("GT-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
 			else if(temp1->type.type == "int" && temp3->type.type == "float"){
 				$$ = new OpBinary("GT-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
 			else if (temp1->type.type == "float" && temp3->type.type == "int"){
 				$$ = new OpBinary("GT-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
+			$$->type.type = "int";
 		}
 	| relational_expression LE_OP additive_expression 
 		{
@@ -551,20 +545,17 @@ relational_expression
 			ExpAst* temp3 = $3;
 			if(temp1->type.type == "int" && temp3->type.type == "int"){
 				$$ = new OpBinary("LE_OP-INT", temp1, temp3);
-				$$->type.type = "int";
 			}
 			else if(temp1->type.type == "float" && temp3->type.type == "float"){
 				$$ = new OpBinary("LE_OP-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
 			else if(temp1->type.type == "int" && temp3->type.type == "float"){
 				$$ = new OpBinary("LE_OP-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
 			else if (temp1->type.type == "float" && temp3->type.type == "int"){
 				$$ = new OpBinary("LE_OP-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
+			$$->type.type = "int";
 		}
 	| relational_expression GE_OP additive_expression 
 		{
@@ -572,20 +563,17 @@ relational_expression
 			ExpAst* temp3 = $3;
 			if(temp1->type.type == "int" && temp3->type.type == "int"){
 				$$ = new OpBinary("GE_OP-INT", temp1, temp3);
-				$$->type.type = "int";
 			}
 			else if(temp1->type.type == "float" && temp3->type.type == "float"){
 				$$ = new OpBinary("GE_OP-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
 			else if(temp1->type.type == "int" && temp3->type.type == "float"){
 				$$ = new OpBinary("GE_OP-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
 			else if (temp1->type.type == "float" && temp3->type.type == "int"){
 				$$ = new OpBinary("GE_OP-FLOAT", temp1, temp3);
-				$$->type.type = "float";
 			}
+			$$->type.type = "int";
 		}
 	;
 

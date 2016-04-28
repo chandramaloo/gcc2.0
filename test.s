@@ -2,8 +2,9 @@
 L0:	.asciiz	":"
 L1:	.asciiz	"\n"
 L2:	.asciiz	"\n"
-L3:	.asciiz	"Given array is \n"
-L4:	.asciiz	"\nSorted array is \n"
+L3:	.asciiz	"\n"
+L4:	.asciiz	"Given array is \n"
+L5:	.asciiz	"\nSorted array is \n"
 	.text
 
 merge:
@@ -81,7 +82,7 @@ merge:
 	move $t7, $t0
 	move $t0, $t7
 	sw $t6, 0($t0)
-L5:
+L6:
 #OpBinary
 #Identifier
 	addi $sp, $sp, -4
@@ -101,7 +102,7 @@ L5:
 	slt $t0, $t0, $t1
 	move $t8, $t0
 	move $t0, $t8
-	beq $t0, $0, L6
+	beq $t0, $0, L7
 #Seq
 #Assign
 #Member
@@ -141,12 +142,13 @@ L5:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	addi $t0, $t0,0
-	lw $t8, 0($t0)
+#AAAfloat
+	l.s $f2, 0($t0)
 #Member
 #ArrayRef
 #Identifier
 	addi $t0, $fp, -24
-	move $t9, $t0
+	move $t8, $t0
 #Identifier
 	addi $sp, $sp, -4
 	lw $t1, -4($fp)
@@ -156,7 +158,7 @@ L5:
 	lw $t1, 0($sp)
 	addi $sp, $sp, 4
 	mul $t1, $t1, $t0
-	move $t0, $t9
+	move $t0, $t8
 	add $t0, $t0, $t1
 	addi $sp, $sp, -4
 	sw $t0, 0($sp)
@@ -164,28 +166,23 @@ L5:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	addi $t0, $t0,0
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	sw $t8, 0($t0)
+	move $t9, $t0
+	move $t0, $t9
+	mov.s $f0, $f2
+	s.s $f0, 0($t0)
 
 #OpUnary
 #Identifier
 	addi $t0, $fp, -4
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
+	move $t9, $t0
+	move $t0, $t9
 	lw $t1, 0($t0)
 	addi $t1, $t1, 1
 	sw $t1, 0($t0)
 	addi $sp, $sp, -4
 	sw $t1, 0($sp)
-	j L5
-L6:
+	j L6
+L7:
 
 #For
 #Assign
@@ -204,7 +201,7 @@ L6:
 	lw $t1, 0($sp)
 	sw $t1, 0($t0)
 
-L7:
+L8:
 #OpBinary
 #Identifier
 	addi $sp, $sp, -4
@@ -227,7 +224,7 @@ L7:
 
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
-	beq $t0, $0, L8
+	beq $t0, $0, L9
 #Seq
 #Assign
 #Member
@@ -285,10 +282,8 @@ L7:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	addi $t0, $t0,0
-	addi $sp, $sp, -4
-	lw $t1, 0($t0)
-	sw $t1, 0($sp)
-
+#AAAfloat
+	l.s $f2, 0($t0)
 #Member
 #ArrayRef
 #Identifier
@@ -319,9 +314,8 @@ L7:
 
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
-	lw $t1, 0($sp)
-	sw $t1, 0($t0)
-
+	mov.s $f0, $f2
+	s.s $f0, 0($t0)
 
 #OpUnary
 #Identifier
@@ -336,8 +330,8 @@ L7:
 	sw $t1, 0($t0)
 	addi $sp, $sp, -4
 	sw $t1, 0($sp)
-	j L7
-L8:
+	j L8
+L9:
 
 #Assign
 #IntConst
@@ -388,7 +382,7 @@ L8:
 	sw $t1, 0($t0)
 
 #While
-L9:
+L10:
 #OpBinary
 #OpBinary
 #Identifier
@@ -441,7 +435,7 @@ L9:
 
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
-	beq $t0, $0, L10
+	beq $t0, $0, L11
 #Seq
 #If
 #OpBinary
@@ -470,10 +464,8 @@ L9:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	addi $t0, $t0,0
-	addi $sp, $sp, -4
-	lw $t1, 0($t0)
-	sw $t1, 0($sp)
-
+#AAAfloat
+	l.s $f2, 0($t0)
 #Member
 #ArrayRef
 #Identifier
@@ -499,221 +491,21 @@ L9:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	addi $t0, $t0,0
+#AAAfloat
+	l.s $f3, 0($t0)
+# operating to produce a float
+	mov.s $f1, $f3
+	mov.s $f0, $f2
+	c.le.s $f0, $f1
+	bc1t L12
 	addi $sp, $sp, -4
-	lw $t1, 0($t0)
-	sw $t1, 0($sp)
-
-	lw $t1 0($sp)
-	addi $sp, $sp, 4
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-# operating to produce an integer
-	sle $t0, $t0, $t1
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	beq $t0, $0, L11
-#Seq
-#Assign
-#Member
-#ArrayRef
-#Identifier
-	addi $t0, $fp, -24
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-#Identifier
-	addi $sp, $sp, -4
-	lw $t1, -4($fp)
-	sw $t1, 0($sp)
-
-	addi $t0, $0, -44
-	lw $t1, 0($sp)
-	addi $sp, $sp, 4
-	mul $t1, $t1, $t0
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	add $t0, $t0, $t1
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	addi $t0, $t0,0
-	addi $sp, $sp, -4
-	lw $t1, 0($t0)
-	sw $t1, 0($sp)
-
-#Member
-#ArrayRef
-#Identifier
-	addi $sp, $sp, -4
-	lw $t1, 20($fp)
-	sw $t1, 0($sp)
-
-#Identifier
-	addi $sp, $sp, -4
-	lw $t1, -12($fp)
-	sw $t1, 0($sp)
-
-	addi $t0, $0, -44
-	lw $t1, 0($sp)
-	addi $sp, $sp, 4
-	mul $t1, $t1, $t0
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	add $t0, $t0, $t1
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	addi $t0, $t0,0
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	lw $t1, 0($sp)
-	sw $t1, 0($t0)
-
-#OpUnary
-#Identifier
-	addi $t0, $fp, -4
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	lw $t1, 0($t0)
-	addi $t1, $t1, 1
-	sw $t1, 0($t0)
-	addi $sp, $sp, -4
-	sw $t1, 0($sp)
-
-	j L12
-L11:
-#Seq
-#Assign
-#Member
-#ArrayRef
-#Identifier
-	addi $t0, $fp, -464
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-#Identifier
-	addi $sp, $sp, -4
-	lw $t1, -8($fp)
-	sw $t1, 0($sp)
-
-	addi $t0, $0, -44
-	lw $t1, 0($sp)
-	addi $sp, $sp, 4
-	mul $t1, $t1, $t0
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	add $t0, $t0, $t1
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	addi $t0, $t0,0
-	addi $sp, $sp, -4
-	lw $t1, 0($t0)
-	sw $t1, 0($sp)
-
-#Member
-#ArrayRef
-#Identifier
-	addi $sp, $sp, -4
-	lw $t1, 20($fp)
-	sw $t1, 0($sp)
-
-#Identifier
-	addi $sp, $sp, -4
-	lw $t1, -12($fp)
-	sw $t1, 0($sp)
-
-	addi $t0, $0, -44
-	lw $t1, 0($sp)
-	addi $sp, $sp, 4
-	mul $t1, $t1, $t0
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	add $t0, $t0, $t1
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	addi $t0, $t0,0
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	lw $t1, 0($sp)
-	sw $t1, 0($t0)
-
-#OpUnary
-#Identifier
-	addi $t0, $fp, -8
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	lw $t1, 0($t0)
-	addi $t1, $t1, 1
-	sw $t1, 0($t0)
-	addi $sp, $sp, -4
-	sw $t1, 0($sp)
-
+	sw $0, 0($sp)
+	j L13
 L12:
-
-#OpUnary
-#Identifier
-	addi $t0, $fp, -12
+	addi $t0, $0, 1
 	addi $sp, $sp, -4
 	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	lw $t1, 0($t0)
-	addi $t1, $t1, 1
-	sw $t1, 0($t0)
-	addi $sp, $sp, -4
-	sw $t1, 0($sp)
-
-	j L9
-L10:
-
-#While
 L13:
-#OpBinary
-#Identifier
-	addi $sp, $sp, -4
-	lw $t1, -4($fp)
-	sw $t1, 0($sp)
-
-#Identifier
-	addi $sp, $sp, -4
-	lw $t1, -16($fp)
-	sw $t1, 0($sp)
-
-	lw $t1 0($sp)
-	addi $sp, $sp, 4
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-# operating to produce an integer
-	slt $t0, $t0, $t1
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	beq $t0, $0, L14
@@ -744,10 +536,8 @@ L13:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	addi $t0, $t0,0
-	addi $sp, $sp, -4
-	lw $t1, 0($t0)
-	sw $t1, 0($sp)
-
+#AAAfloat
+	l.s $f2, 0($t0)
 #Member
 #ArrayRef
 #Identifier
@@ -778,9 +568,8 @@ L13:
 
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
-	lw $t1, 0($sp)
-	sw $t1, 0($t0)
-
+	mov.s $f0, $f2
+	s.s $f0, 0($t0)
 #OpUnary
 #Identifier
 	addi $t0, $fp, -4
@@ -794,48 +583,9 @@ L13:
 	sw $t1, 0($t0)
 	addi $sp, $sp, -4
 	sw $t1, 0($sp)
-#OpUnary
-#Identifier
-	addi $t0, $fp, -12
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
 
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	lw $t1, 0($t0)
-	addi $t1, $t1, 1
-	sw $t1, 0($t0)
-	addi $sp, $sp, -4
-	sw $t1, 0($sp)
-
-	j L13
+	j L15
 L14:
-
-#While
-L15:
-#OpBinary
-#Identifier
-	addi $sp, $sp, -4
-	lw $t1, -8($fp)
-	sw $t1, 0($sp)
-
-#Identifier
-	addi $sp, $sp, -4
-	lw $t1, -20($fp)
-	sw $t1, 0($sp)
-
-	lw $t1 0($sp)
-	addi $sp, $sp, 4
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-# operating to produce an integer
-	slt $t0, $t0, $t1
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0, 0($sp)
-	addi $sp, $sp, 4
-	beq $t0, $0, L16
 #Seq
 #Assign
 #Member
@@ -863,10 +613,8 @@ L15:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	addi $t0, $t0,0
-	addi $sp, $sp, -4
-	lw $t1, 0($t0)
-	sw $t1, 0($sp)
-
+#AAAfloat
+	l.s $f2, 0($t0)
 #Member
 #ArrayRef
 #Identifier
@@ -897,9 +645,243 @@ L15:
 
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
-	lw $t1, 0($sp)
-	sw $t1, 0($t0)
+	mov.s $f0, $f2
+	s.s $f0, 0($t0)
+#OpUnary
+#Identifier
+	addi $t0, $fp, -8
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
 
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	lw $t1, 0($t0)
+	addi $t1, $t1, 1
+	sw $t1, 0($t0)
+	addi $sp, $sp, -4
+	sw $t1, 0($sp)
+
+L15:
+
+#OpUnary
+#Identifier
+	addi $t0, $fp, -12
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	lw $t1, 0($t0)
+	addi $t1, $t1, 1
+	sw $t1, 0($t0)
+	addi $sp, $sp, -4
+	sw $t1, 0($sp)
+
+	j L10
+L11:
+
+#While
+L16:
+#OpBinary
+#Identifier
+	addi $sp, $sp, -4
+	lw $t1, -4($fp)
+	sw $t1, 0($sp)
+
+#Identifier
+	addi $sp, $sp, -4
+	lw $t1, -16($fp)
+	sw $t1, 0($sp)
+
+	lw $t1 0($sp)
+	addi $sp, $sp, 4
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+# operating to produce an integer
+	slt $t0, $t0, $t1
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	beq $t0, $0, L17
+#Seq
+#Assign
+#Member
+#ArrayRef
+#Identifier
+	addi $t0, $fp, -24
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+#Identifier
+	addi $sp, $sp, -4
+	lw $t1, -4($fp)
+	sw $t1, 0($sp)
+
+	addi $t0, $0, -44
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	mul $t1, $t1, $t0
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	addi $t0, $t0,0
+#AAAfloat
+	l.s $f2, 0($t0)
+#Member
+#ArrayRef
+#Identifier
+	addi $sp, $sp, -4
+	lw $t1, 20($fp)
+	sw $t1, 0($sp)
+
+#Identifier
+	addi $sp, $sp, -4
+	lw $t1, -12($fp)
+	sw $t1, 0($sp)
+
+	addi $t0, $0, -44
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	mul $t1, $t1, $t0
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	addi $t0, $t0,0
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	mov.s $f0, $f2
+	s.s $f0, 0($t0)
+#OpUnary
+#Identifier
+	addi $t0, $fp, -4
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	lw $t1, 0($t0)
+	addi $t1, $t1, 1
+	sw $t1, 0($t0)
+	addi $sp, $sp, -4
+	sw $t1, 0($sp)
+#OpUnary
+#Identifier
+	addi $t0, $fp, -12
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	lw $t1, 0($t0)
+	addi $t1, $t1, 1
+	sw $t1, 0($t0)
+	addi $sp, $sp, -4
+	sw $t1, 0($sp)
+
+	j L16
+L17:
+
+#While
+L18:
+#OpBinary
+#Identifier
+	addi $sp, $sp, -4
+	lw $t1, -8($fp)
+	sw $t1, 0($sp)
+
+#Identifier
+	addi $sp, $sp, -4
+	lw $t1, -20($fp)
+	sw $t1, 0($sp)
+
+	lw $t1 0($sp)
+	addi $sp, $sp, 4
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+# operating to produce an integer
+	slt $t0, $t0, $t1
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	beq $t0, $0, L19
+#Seq
+#Assign
+#Member
+#ArrayRef
+#Identifier
+	addi $t0, $fp, -464
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+#Identifier
+	addi $sp, $sp, -4
+	lw $t1, -8($fp)
+	sw $t1, 0($sp)
+
+	addi $t0, $0, -44
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	mul $t1, $t1, $t0
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	addi $t0, $t0,0
+#AAAfloat
+	l.s $f2, 0($t0)
+#Member
+#ArrayRef
+#Identifier
+	addi $sp, $sp, -4
+	lw $t1, 20($fp)
+	sw $t1, 0($sp)
+
+#Identifier
+	addi $sp, $sp, -4
+	lw $t1, -12($fp)
+	sw $t1, 0($sp)
+
+	addi $t0, $0, -44
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	mul $t1, $t1, $t0
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	addi $t0, $t0,0
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	mov.s $f0, $f2
+	s.s $f0, 0($t0)
 #OpUnary
 #Identifier
 	addi $t0, $fp, -8
@@ -927,8 +909,8 @@ L15:
 	addi $sp, $sp, -4
 	sw $t1, 0($sp)
 
-	j L15
-L16:
+	j L18
+L19:
 
 
 
@@ -972,7 +954,7 @@ mergeSort:
 
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
-	beq $t0, $0, L17
+	beq $t0, $0, L20
 #Seq
 #Assign
 #OpBinary
@@ -1116,8 +1098,8 @@ mergeSort:
 	addi $sp, $sp, 16
 
 
-	j L18
-L17:
+	j L21
+L20:
 #Seq
 #Assign
 #Identifier
@@ -1136,7 +1118,7 @@ L17:
 	sw $t1, 0($t0)
 
 
-L18:
+L21:
 
 
 
@@ -1174,7 +1156,7 @@ printArray:
 	lw $t1, 0($sp)
 	sw $t1, 0($t0)
 
-L19:
+L22:
 #OpBinary
 #Identifier
 	addi $sp, $sp, -4
@@ -1197,7 +1179,7 @@ L19:
 
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
-	beq $t0, $0, L20
+	beq $t0, $0, L23
 #Seq
 #Funcall
 # printf prints an int identifier
@@ -1240,13 +1222,10 @@ L19:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	addi $t0, $t0,0
-	addi $sp, $sp, -4
-	lw $t1, 0($t0)
-	sw $t1, 0($sp)
-
-	lw $a0, 0($sp)
-	addi $sp, $sp, 4
-	addi $v0, $0, 1
+#AAAfloat
+	l.s $f2, 0($t0)
+	mov.s $f12, $f2
+	addi $v0, $0, 2
 	syscall
 # printf prints a string const
 	la $a0, L1
@@ -1266,8 +1245,8 @@ L19:
 	sw $t1, 0($t0)
 	addi $sp, $sp, -4
 	sw $t1, 0($sp)
-	j L19
-L20:
+	j L22
+L23:
 
 #Funcall
 # printf prints a string const
@@ -1343,8 +1322,6 @@ main:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
 	s.s $f0, 0($t0)
 #Assign
 #FloatConst
@@ -1380,8 +1357,6 @@ main:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
 	s.s $f0, 0($t0)
 #Assign
 #FloatConst
@@ -1417,8 +1392,6 @@ main:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
 	s.s $f0, 0($t0)
 #Assign
 #FloatConst
@@ -1454,8 +1427,6 @@ main:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
 	s.s $f0, 0($t0)
 #Assign
 #FloatConst
@@ -1491,8 +1462,6 @@ main:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
 	s.s $f0, 0($t0)
 #Assign
 #FloatConst
@@ -1528,8 +1497,6 @@ main:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
 	s.s $f0, 0($t0)
 #Assign
 #FloatConst
@@ -1565,8 +1532,6 @@ main:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
 	s.s $f0, 0($t0)
 #Assign
 #FloatConst
@@ -1602,8 +1567,6 @@ main:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
 	s.s $f0, 0($t0)
 #Assign
 #FloatConst
@@ -1639,8 +1602,6 @@ main:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
 	s.s $f0, 0($t0)
 #Assign
 #FloatConst
@@ -1676,12 +1637,46 @@ main:
 	lw $t0, 0($sp)
 	addi $sp, $sp, 4
 	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
 	s.s $f0, 0($t0)
 #Funcall
+# printf prints an expression
+#Member
+#ArrayRef
+#Identifier
+	addi $t0, $fp, -4
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+#IntConst
+	addi $t0, $0, 9
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	addi $t0, $0, -44
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	mul $t1, $t1, $t0
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	addi $sp, $sp, -4
+	sw $t0, 0($sp)
+
+	lw $t0, 0($sp)
+	addi $sp, $sp, 4
+	addi $t0, $t0,0
+#AAAfloat
+	l.s $f2, 0($t0)
+	mov.s $f12, $f2
+	addi $v0, $0, 2
+	syscall
 # printf prints a string const
 	la $a0, L3
+	addi $v0, $0, 4
+	syscall
+#Funcall
+# printf prints a string const
+	la $a0, L4
 	addi $v0, $0, 4
 	syscall
 #Funcall
@@ -1736,7 +1731,7 @@ main:
 
 #Funcall
 # printf prints a string const
-	la $a0, L4
+	la $a0, L5
 	addi $v0, $0, 4
 	syscall
 #Funcall

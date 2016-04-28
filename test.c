@@ -1,6 +1,6 @@
 struct chandra 
 {
-	int i;
+	float i;
 	int k[10];
 };
 void merge(struct chandra arr[10], int l, int m, int r)
@@ -97,7 +97,7 @@ int main()
     arr[7].i=122.1;
     arr[8].i=12.1;
     arr[9].i=1.12;
- 
+ 	printf(arr[9].i, "\n");
     printf("Given array is \n");
     printArray(arr, arr_size);
  
