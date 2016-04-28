@@ -1267,7 +1267,13 @@ string Identifier::generate_code(const LocalSymbolTable& lstt, bool location) {
 	else {
 		// return the l-value for the identifier
 		// get the address of this identifier on the stack and push that on the stack
-		ret += "\taddi $t0, $fp, " + to_string(varoffset) + "\n\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+		ret += "\taddi $t0, $fp, " + to_string(varoffset) + "\n";
+		if(myPop(this)){
+			ret += "\tmove " + this->reg + ", $t0\n";
+		}
+		else{
+			ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+		}
 	}
 	return ret;
 }
@@ -1303,6 +1309,7 @@ string ArrayRef::generate_code(const LocalSymbolTable& lstt, bool location) {
 	else
 		ret += child1->generate_code(lstt, 0);
 
+
 	ret += child2->generate_code(lstt, 0);
 
 	int n=1;
@@ -1311,16 +1318,39 @@ string ArrayRef::generate_code(const LocalSymbolTable& lstt, bool location) {
 	// multiply by type width and offset is negative wrt to pointer
 	n *= type.getWidth();
 	n *= -1;
+	ret += "\taddi $t0, $0, " + to_string(n) + "\n";
 	// computing the address of the array reference
-	ret += "\tlw $t1, 0($sp)\n\taddi $t0, $0, " + to_string(n) + "\n";
-	ret += "\tmul $t1, $t1, $t0\n\tlw $t0, 4($sp)\n\taddi $sp, $sp, 8\n\tadd $t0, $t0, $t1\n";
+	if(myPush(child2)){
+		ret += "\tmove $t1, " + child2->reg + "\n";
+	}
+	else{
+		ret += "\tlw $t1, 0($sp)\n\taddi $sp, $sp, 4\n";
+	}
+	ret += "\tmul $t1, $t1, $t0\n";
+	if(myPush(child1)){
+		ret += "\tmove $t0, " + child1->reg + "\n";
+	}
+	else{
+		ret += "\tlw $t0, 0($sp)\n\taddi $sp, $sp, 4\n";
+	}
+	ret += "\tadd $t0, $t0, $t1\n";
 
 	if (!location) {
-		int obj_width = type.getWidth();
-		ret += "\taddi $sp, $sp, -" + to_string(obj_width) + "\n";
-		ret += copy(obj_width, "($t0)", "($sp)", 4-obj_width, 0);
+		if(myPop(this)){
+			ret += "\tlw " + this->reg + ", 0($t0)\n";
+		}
+		else{
+			int obj_width = type.getWidth();
+			ret += "\taddi $sp, $sp, -" + to_string(obj_width) + "\n";
+			ret += copy(obj_width, "($t0)", "($sp)", 4-obj_width, 0);
+		}
 	} else {
-		ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+		if(myPop(this)){
+			ret += "\tmove " + this->reg + ", $t0\n";
+		}
+		else{
+			ret += "\taddi $sp, $sp, -4\n\tsw $t0, 0($sp)\n\n";
+		}
 	}
 	return ret;
 }
