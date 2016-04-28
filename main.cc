@@ -24,7 +24,7 @@ int main (int argc, char** argv)
 		tstack.push(r);
 
 	r = "$f9";
-	for(int i=15; i>=2; i--, r[2]--)
+	for(int i=9; i>=2; i--, r[2]--)
 		ftstack.push(r);
 
   // print all const strings to target file
