@@ -301,6 +301,7 @@ public:
 
 class CacheBlock{
 public:
+	CacheBlock(string reg);
 	string identifier, reg;
 	bool valid;
 	int depth, offset;
@@ -308,6 +309,8 @@ public:
 
 class Cache{
 public:
-	vector<CacheBlock> cache;
-	string findregister(int);
+	Cache();
+	// intcache has 8 cacheblocks, floatcache has 19 cacheblocks
+	vector<CacheBlock> intcache, floatcache;
+	string findregister(int, bool);
 };

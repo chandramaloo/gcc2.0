@@ -1,3 +1,4 @@
+// TODO order of evaluation for a + a++ + a
 // helper functions
 string newlabel(){
 	return "L"+to_string(labelcount++);
@@ -835,18 +836,18 @@ string Funcall::generate_code(const LocalSymbolTable& lstt, bool location) {
 	// gen code for all the children
 	for(int i=0; i<children.size(); i++){
 
-       // TODO check if the parameter is passed by reference in the function definition in the GST
-        if(children[i]->type.vec.size()>0){
-        	if(lstt.getEntry(children[i]->value).symbol_scope!="param"){
-	        	ret += children[i]->generate_code(lstt, 1);
-        	}
-	        else {
-		        ret += children[i]->generate_code(lstt, 0);
-	        }
-        }
-	    else{
+     // TODO check if the parameter is passed by reference in the function definition in the GST
+      if(children[i]->type.vec.size()>0){
+      	if(lstt.getEntry(children[i]->value).symbol_scope!="param"){
+        	ret += children[i]->generate_code(lstt, 1);
+      	}
+        else {
 	        ret += children[i]->generate_code(lstt, 0);
-	    }
+        }
+      }
+    else{
+        ret += children[i]->generate_code(lstt, 0);
+    }
 	}
 
 	// call the function
@@ -1060,11 +1061,54 @@ void Identifier::print(){
 	cerr << label << " \"" << value << "\"";
 }
 
+// add a boolean parameter PushToStack; if it is true; you NEED to push it to the stack
+
+// if location not needed
+// if register is set for this offset, set reg = that;
+// else try and allot it, if successful, store from the stack to that register
+// if unable to allot a register, push to stack and set reg = ""
 string Identifier::generate_code(const LocalSymbolTable& lstt, bool location) {
 	string ret = "";
 	int varoffset = lstt.getEntry(value).offset;
 	if (!location) {
 		int obj_width = type.getWidth();
+
+		// TODO check if pure type
+		if (type.type == "float"){
+			reg = cache.isCached(offset, 0);
+
+			if (reg == "") {
+				// set regvalid false
+				reg = cache.AllotRegister(offset, 0);
+				if (reg != "") {
+					// load value from stack to the register
+					ret += "\tl.s " + reg + ", " + to_string(offset) + "($fp)\n";
+					// set regvalid true and return
+				} else {
+					// set regvalid false
+				}
+			} else {
+				// set regvalid true
+				return "";
+			}
+		} else {
+			reg = cache.isCached(offset, 1);
+
+			if (reg == "") {
+				reg = cache.AllotRegister(offset, 1);
+				if (reg != "") {
+					// set regvalid true
+					// load value from stack to the register
+					return "\tlw " + reg + ", " + to_string(offset) + "($fp)\n";
+				} else {
+					// set regvalid false
+				}
+			} else {
+				// set regvalid true
+				return "";
+			}
+
+		}
 		ret += "\taddi $sp, $sp, -" + to_string(obj_width) + "\n";
 		ret += copy(obj_width, "($fp)", "($sp)", (4-obj_width+varoffset), 0);
 	}
@@ -1133,12 +1177,60 @@ void ArrayRef::assignReg() {
 
 }
 
+CacheBlock::CacheBlock(string reg) {
+	identifier = "";
+	this->reg = reg;
+	valid = 0;
+	depth = -1;
+	offset = 0;
+}
+
+Cache::Cache() {
+	string s = "$s", f = "$f";
+	for (int i=0; i<8; i++)
+		intcache.push_back(CacheBlock(s+to_string(i)));
+
+	for (int i=13; i<32; i++)
+		floatcache.push_back(CacheBlock(f+to_string(i)));
+}
 
 // off is the offset for which we are checking
-string Cache::findregister(int off) {
-	for(int i=0; i<cache.size(); i++) {
-		if (cache[i].valid && cache[i].depth == currentDepth && cache[i].offset == off) {
-			return cache[i].reg;
+string Cache::isCached(int off, bool integer) {
+	if (integer) {
+		for(int i=0; i<intcache.size(); i++) {
+			if (intcache[i].valid) && intcache[i].depth == currentDepth && intcache[i].offset == off
+					return intcache[i].reg;
+		}
+		return "";
+
+	}
+	else {
+		for(int i=0; i<floatcache.size(); i++) {
+			if (floatcache[i].valid && floatcache[i].depth == currentDepth && floatcache[i].offset == off)
+					return floatcache[i].reg;
+		}
+		return "";
+	}
+}
+
+string Cache::AllotRegister(int off, bool integer) {
+	int j = -1;
+	if (integer) {
+		for(int i=0; i<intcache.size(); i++) {
+			if (!intcache[i].valid){
+				j = i;
+				break;
+			}
 		}
 	}
+	else {
+		for(int i=0; i<floatcache.size(); i++) {
+			if (!floatcache[i].valid){
+				j = i;
+				break;
+			}
+		}
+	}
+
+	if (j == -1) return "";
 }
