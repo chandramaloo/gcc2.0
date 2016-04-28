@@ -13,12 +13,13 @@ main:
 
 	addi $t2, $0, 0
 	addi $t0, $fp, -4
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
+	#df
+	move $t3, $t0
+	move $t0, $t3
+	mtc1 $t2, $f0
 
-	lw $t0 0($sp)
-	addi $sp, $sp, 4
-	sw $t2, 0($t0)
+	cvt.s.w $f0, $f0
+	s.s $f0, 0($t0)
 	addi $sp, $sp, -4
 	lw $t1, -4($fp)
 	sw $t1, 0($sp)
@@ -28,27 +29,22 @@ main:
 	mov.s $f1, $f2
 	l.s $f0, 0($sp)
 	addi $sp, $sp, 4
-	cvt.s.w $f0, $f0
 	add.s $f0, $f0, $f1
 	mov.s $f2, $f0
 	addi $t0, $fp, -4
-	addi $sp, $sp, -4
-	sw $t0, 0($sp)
-
-	lw $t0 0($sp)
-	addi $sp, $sp, 4
-	mov.s $f0, $f2
-
-	cvt.w.s $f0, $f0
+	#df
+	move $t2, $t0
+	move $t0, $t2
+	mov.s $f2, $f0
 	s.s $f0, 0($t0)
-# printf prints an int identifier
+# printf prints a float identifier
 	addi $sp, $sp, -4
 	lw $t1, -4($fp)
 	sw $t1, 0($sp)
 
-	lw $a0, 0($sp)
+	l.s $f12, 0($sp)
 	addi $sp, $sp, 4
-	addi $v0, $0, 1
+	addi $v0, $0, 2
 	syscall
 # printf prints a string const
 	la $a0, L0
