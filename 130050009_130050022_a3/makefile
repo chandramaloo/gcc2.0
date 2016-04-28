@@ -1,3 +1,6 @@
+# Chandra Maloo - 130050009
+# Utkarsh Kumar - 130050022
+
 file = test.c
 file_s = test.s
 
